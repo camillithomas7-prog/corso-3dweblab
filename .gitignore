@@ -1,0 +1,22 @@
+# ── il database vive sul server: un deploy non deve MAI sovrascriverlo ──
+data/corso.db
+data/corso.db-wal
+data/corso.db-shm
+data/*.db
+
+# ── contenuti caricati dal pannello: stanno sul server, non nel repo ──
+storage/video/*
+storage/pdf/*
+storage/tmp/*
+!storage/*/.gitkeep
+
+# ── solo anteprima locale, non va online ──
+router.php
+
+# ── sistema ──
+.DS_Store
+Thumbs.db
+*.log
+
+# la cartella deve esistere sul server
+!data/.gitkeep
