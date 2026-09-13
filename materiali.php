@@ -9,7 +9,7 @@ $rows = db()->query("SELECT m.*, l.title AS ltitle, c.title AS ctitle
 $g = [];
 foreach ($rows as $r) $g[$r['ctitle'] ?: 'Materiali generali'][] = $r;
 
-head('Materiali'); topbar($code); ?>
+head('Materiali'); topbar($code, '', 'materiali.php'); ?>
 <div class="wrap" style="padding-top:24px;padding-bottom:90px">
   <div style="margin-bottom:20px">
     <div class="kicker" style="margin-bottom:7px">Area download</div>

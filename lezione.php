@@ -34,7 +34,7 @@ $q->execute([$code['id']]); foreach ($q->fetchAll() as $r) $pr[(int)$r['lesson_i
 $tot = count($les); $done = count(array_filter($pr, fn($x)=>$x['completed']));
 $pct = $tot ? round($done/$tot*100) : 0;
 
-head($l['title']); topbar($code); ?>
+head($l['title']); topbar($code, '', 'corso.php'); ?>
 <div class="wrap shell">
   <aside class="side">
     <div class="prog">

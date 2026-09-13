@@ -20,9 +20,19 @@ function head(string $title, string $base = ''): void { ?>
 <body>
 <?php }
 
-function topbar(?array $code = null, string $base = ''): void { ?>
+function topbar(?array $code = null, string $base = '', string $active = ''): void {
+    $mats = 0;
+    try { $mats = (int)db()->query('SELECT COUNT(*) FROM materials')->fetchColumn(); } catch (Throwable $e) {}
+    ?>
 <div class="top"><div class="wrap in">
   <a class="lg" href="<?= $base ?>corso.php"><img src="<?= $base ?>assets/img/logo-light.png" alt="3D WEB LAB"></a>
+  <?php if ($code): ?>
+  <nav class="tnav">
+    <a href="<?= $base ?>corso.php" class="<?= $active==='corso.php'?'on':'' ?>">Il corso</a>
+    <a href="<?= $base ?>materiali.php" class="<?= $active==='materiali.php'?'on':'' ?>">
+      Materiali<?php if ($mats): ?><span class="cnt"><?= $mats ?></span><?php endif; ?></a>
+  </nav>
+  <?php endif; ?>
   <span class="sp"></span>
   <?php if ($code): ?>
     <span class="who">accesso <b class="mono"><?= e($code['code']) ?></b></span>

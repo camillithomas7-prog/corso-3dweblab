@@ -18,7 +18,7 @@ $next = null;
 foreach ($cats as $c) foreach ($byCat[(int)$c['id']] ?? [] as $l)
     if (!$next && empty($pr[(int)$l['id']]['completed'])) $next = $l;
 
-head('Il tuo corso'); topbar($code); ?>
+head("Il tuo corso"); topbar($code, "", "corso.php"); ?>
 <div class="wrap shell">
   <aside class="side">
     <div class="prog">
