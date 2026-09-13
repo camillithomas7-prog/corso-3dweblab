@@ -45,7 +45,7 @@ head('Accedi al corso');
     </form>
     <div class="authfoot">
       Il codice è nella mail di conferma dell'ordine.<br>
-      Non lo trovi? Scrivi a <a href="mailto:info@3dweblab.it">info@3dweblab.it</a>
+      Non lo trovi? Scrivi a <a href="mailto:supporto@3dweblab.it">supporto@3dweblab.it</a>
     </div>
   </div>
 </div></div>
