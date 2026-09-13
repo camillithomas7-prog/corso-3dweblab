@@ -49,11 +49,20 @@ function safe_name(string $orig, string $ext): string {
     $b = trim(substr($b, 0, 60), '-') ?: 'file';
     return date('Ymd-His') . '-' . bin2hex(random_bytes(3)) . '-' . $b . '.' . $ext;
 }
-/** Durata di un video, se ffprobe è disponibile sul server. */
+/**
+ * Durata di un video. Sugli hosting condivisi shell_exec è quasi sempre
+ * disabilitato: in quel caso restituisce 0 e la durata la legge il browser,
+ * che ce l'ha già senza scomodare il server.
+ */
 function video_seconds(string $path): int {
-    $bin = trim((string)@shell_exec('command -v ffprobe 2>/dev/null'));
-    if (!$bin) return 0;
-    $o = @shell_exec(escapeshellcmd($bin) . ' -v error -show_entries format=duration -of default=nw=1:nk=1 '
-                     . escapeshellarg($path) . ' 2>/dev/null');
-    return (int)round((float)$o);
+    if (!function_exists('shell_exec')) return 0;
+    $dis = array_map('trim', explode(',', (string)ini_get('disable_functions')));
+    if (in_array('shell_exec', $dis, true)) return 0;
+    try {
+        $bin = trim((string)@shell_exec('command -v ffprobe 2>/dev/null'));
+        if (!$bin) return 0;
+        $o = @shell_exec(escapeshellcmd($bin) . ' -v error -show_entries format=duration -of default=nw=1:nk=1 '
+                         . escapeshellarg($path) . ' 2>/dev/null');
+        return (int)round((float)$o);
+    } catch (Throwable $e) { return 0; }
 }

@@ -25,7 +25,14 @@ async function chunkUpload(file, kind, csrf, onProgress) {
       fd.append('idx', idx); fd.append('total', total); fd.append('name', file.name);
       fd.append('chunk', file.slice(idx * CH, (idx + 1) * CH));
       fetch('upload.php', { method: 'POST', body: fd })
-        .then(r => r.json())
+        .then(async r => {
+          const t = await r.text();
+          if (!t) throw new Error('il server ha risposto vuoto (HTTP ' + r.status +
+                                  '): blocco troppo grande o tempo scaduto');
+          try { return JSON.parse(t); }
+          catch (e) { throw new Error('risposta inattesa dal server (HTTP ' + r.status + '): ' +
+                                      t.replace(/<[^>]*>/g, ' ').trim().slice(0, 160)); }
+        })
         .then(j => {
           if (j.error) return reject(new Error(j.error));
           idx++;
@@ -34,6 +41,22 @@ async function chunkUpload(file, kind, csrf, onProgress) {
         })
         .catch(reject);
     })();
+  });
+}
+
+/* Legge la durata dal file nel browser: il server non ha ffprobe
+   e su hosting condiviso non può nemmeno lanciarlo. */
+function readDuration(file) {
+  return new Promise(resolve => {
+    if (!/^video\//.test(file.type)) return resolve(0);
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    const url = URL.createObjectURL(file);
+    const done = s => { URL.revokeObjectURL(url); resolve(s); };
+    v.onloadedmetadata = () => done(isFinite(v.duration) ? Math.round(v.duration) : 0);
+    v.onerror = () => done(0);
+    setTimeout(() => done(0), 8000);
+    v.src = url;
   });
 }
 
@@ -51,7 +74,8 @@ function wireDrop(dropId, inputId, kind, csrf, hidden, onDone) {
   drop.addEventListener('drop', e => { if (e.dataTransfer.files[0]) go(e.dataTransfer.files[0]); });
   inp.addEventListener('change', () => { if (inp.files[0]) go(inp.files[0]); });
 
-  function go(file) {
+  async function go(file) {
+    const clientSeconds = await readDuration(file);
     bar && bar.classList.add('on');
     const mb = (file.size / 1048576).toFixed(1);
     lab && (lab.textContent = file.name + ' · ' + mb + ' MB');
@@ -62,6 +86,7 @@ function wireDrop(dropId, inputId, kind, csrf, hidden, onDone) {
         drop.querySelector('.t').textContent = '✓ ' + file.name;
         drop.querySelector('.s').textContent = 'Caricato. Salva per confermare.';
         if (hidden) document.getElementById(hidden).value = j.file;
+        if (clientSeconds && !j.seconds) j.seconds = clientSeconds;
         onDone && onDone(j, file);
       })
       .catch(err => {
