@@ -178,7 +178,7 @@ ahead('Lezioni', 'lezioni.php'); show_flash(); ?>
   <?php endif; ?>
 </div>
 
-<script src="../assets/js/upload.js"></script>
+<script src="../assets/js/upload.js?v=<?= @filemtime(APP_ROOT."/assets/js/upload.js") ?>"></script>
 <script>
 const CSRF = <?= json_encode(csrf()) ?>;
 const vt = document.getElementById('vt');

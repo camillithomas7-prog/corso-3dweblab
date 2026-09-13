@@ -11,7 +11,7 @@ function ahead(string $title, string $active): void {
 <link rel="icon" href="../assets/img/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/app.css">
+<link rel="stylesheet" href="../assets/css/app.css?v=<?= @filemtime(APP_ROOT."/assets/css/app.css") ?>">
 </head><body>
 <div class="top"><div class="wrap in">
   <a class="lg" href="dashboard.php"><img src="../assets/img/logo-light.png" alt="3D WEB LAB"></a>

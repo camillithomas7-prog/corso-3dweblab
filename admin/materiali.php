@@ -132,7 +132,7 @@ ahead('Materiali', 'materiali.php'); show_flash(); ?>
 </div>
 
 <?php if (!$ed): ?>
-<script src="../assets/js/upload.js"></script>
+<script src="../assets/js/upload.js?v=<?= @filemtime(APP_ROOT."/assets/js/upload.js") ?>"></script>
 <script>
 const CSRF = <?= json_encode(csrf()) ?>;
 wireDrop('dm','fm','pdf',CSRF,'pdf_file',(j,file)=>{

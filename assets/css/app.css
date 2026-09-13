@@ -219,11 +219,24 @@ table.tb .ac{display:flex;gap:6px;justify-content:flex-end}
 .drop{border:1.5px dashed var(--line);border-radius:11px;padding:26px 18px;text-align:center;
   background:#0a0c14;cursor:pointer;transition:border-color .15s,background .15s}
 .drop:hover,.drop.over{border-color:#2f6f80;background:#0b141b}
+.drop.busy{border-color:#2f6f80;border-style:solid;background:#0b141b;cursor:default;
+  animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{border-color:#2f6f80}50%{border-color:#6ee7ff}}
+.drop.busy .t{color:var(--acc)}
+.drop.busy .t .pc{font-family:"Space Grotesk",monospace;font-size:19px}
+.drop.ok{border-color:#1c3d2a;border-style:solid;background:var(--ok-bg)}
+.drop.ok .t{color:var(--ok);font-size:16px}
+.drop.ok .s b{color:var(--ink)}
+.drop.ko{border-color:#3d2020;border-style:solid;background:var(--bad-bg)}
+.drop.ko .t{color:var(--bad)}
 .drop .t{font-size:14.5px;font-weight:600;margin:9px 0 4px}
 .drop .s{font-size:12.5px;color:var(--dim)}
 .upbar{margin-top:12px;display:none}
 .upbar.on{display:block}
-.upbar .lb{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink2);margin-bottom:6px}
+.upbar .lb{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;color:var(--ink2);margin-bottom:6px}
+.upbar .lb b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upbar .lb span{font-family:"Space Grotesk",monospace;color:var(--acc);flex:0 0 auto}
+.upbar .bar i{transition:width .25s ease-out}
 
 /* ── mobile bottom bar ────────────────────────────────── */
 .mbar{position:fixed;left:0;right:0;bottom:0;z-index:70;display:flex;

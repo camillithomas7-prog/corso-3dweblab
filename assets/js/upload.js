@@ -75,24 +75,63 @@ function wireDrop(dropId, inputId, kind, csrf, hidden, onDone) {
   inp.addEventListener('change', () => { if (inp.files[0]) go(inp.files[0]); });
 
   async function go(file) {
+    const t  = drop.querySelector('.t');
+    const st = drop.querySelector('.s');
+    const mb = file.size / 1048576;
+    const fmt = n => n < 1024 ? n.toFixed(1) + ' MB' : (n / 1024).toFixed(2) + ' GB';
+
+    // blocca il salvataggio finché il file non è arrivato tutto
+    const form = drop.closest('form');
+    const submit = form && form.querySelector('button[type=submit], button:not([type])');
+    const submitLabel = submit ? submit.textContent : '';
+    if (submit) { submit.disabled = true; submit.textContent = 'Attendi il caricamento…'; }
+    window.onbeforeunload = () => 'Caricamento in corso: se esci ricominci da capo.';
+
     const clientSeconds = await readDuration(file);
+
+    drop.classList.add('busy');
     bar && bar.classList.add('on');
-    const mb = (file.size / 1048576).toFixed(1);
-    lab && (lab.textContent = file.name + ' · ' + mb + ' MB');
-    fill && (fill.style.width = '0%');
-    drop.querySelector('.t').textContent = 'Caricamento in corso…';
-    chunkUpload(file, kind, csrf, p => { fill && (fill.style.width = p + '%'); })
+    if (fill) { fill.style.width = '0%'; fill.style.background = ''; }
+    lab && (lab.textContent = file.name);
+    const sub = bar && bar.querySelector('.lb span');
+
+    const t0 = Date.now();
+    t.innerHTML = 'Caricamento <b class="pc">0%</b>';
+    st.textContent = '0 di ' + fmt(mb) + ' — non chiudere la pagina';
+
+    chunkUpload(file, kind, csrf, p => {
+      if (fill) fill.style.width = p + '%';
+      const pc = t.querySelector('.pc'); if (pc) pc.textContent = p + '%';
+      const done = mb * p / 100;
+      const el = (Date.now() - t0) / 1000;
+      const speed = el > 2 ? done / el : 0;
+      const left = speed > 0 ? Math.round((mb - done) / speed) : 0;
+      st.textContent = fmt(done) + ' di ' + fmt(mb)
+        + (left > 0 ? ' — mancano circa ' + (left > 90 ? Math.ceil(left / 60) + ' min' : left + ' s') : '');
+      if (sub) sub.textContent = p + '%';
+    })
       .then(j => {
-        drop.querySelector('.t').textContent = '✓ ' + file.name;
-        drop.querySelector('.s').textContent = 'Caricato. Salva per confermare.';
+        window.onbeforeunload = null;
+        drop.classList.remove('busy');
+        drop.classList.add('ok');
+        if (fill) fill.style.width = '100%';
+        t.innerHTML = '✓ Caricamento completato';
+        st.innerHTML = '<b>' + file.name + '</b> · ' + fmt(mb)
+                     + ' — ora premi <b>Crea lezione</b> per salvare';
+        if (sub) sub.textContent = '100%';
         if (hidden) document.getElementById(hidden).value = j.file;
         if (clientSeconds && !j.seconds) j.seconds = clientSeconds;
+        if (submit) { submit.disabled = false; submit.textContent = submitLabel; }
         onDone && onDone(j, file);
       })
       .catch(err => {
-        drop.querySelector('.t').textContent = 'Caricamento non riuscito';
-        drop.querySelector('.s').textContent = err.message;
-        fill && (fill.style.background = '#f87171');
+        window.onbeforeunload = null;
+        drop.classList.remove('busy');
+        drop.classList.add('ko');
+        t.textContent = '✗ Caricamento non riuscito';
+        st.textContent = err.message + ' — riprova';
+        if (fill) fill.style.background = '#f87171';
+        if (submit) { submit.disabled = false; submit.textContent = submitLabel; }
       });
   }
 }
