@@ -31,6 +31,7 @@ function topbar(?array $code = null, string $base = '', string $active = ''): vo
     <a href="<?= $base ?>corso.php" class="<?= $active==='corso.php'?'on':'' ?>">Il corso</a>
     <a href="<?= $base ?>materiali.php" class="<?= $active==='materiali.php'?'on':'' ?>">
       Materiali<?php if ($mats): ?><span class="cnt"><?= $mats ?></span><?php endif; ?></a>
+    <a href="<?= $base ?>note.php" class="<?= $active==='note.php'?'on':'' ?>">Appunti</a>
   </nav>
   <?php endif; ?>
   <span class="sp"></span>
@@ -45,6 +46,7 @@ function mbar(string $active, string $base = ''): void {
   $items = [
     ['corso.php',     'Corso',     '<path d="M3 5.6h14M3 10h14M3 14.4h9"/>'],
     ['materiali.php', 'Materiali', '<path d="M4 3h7l5 5v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M11 3v5h5"/>'],
+    ['note.php',      'Appunti',   '<path d="M5 2.5h10v15H5z"/><path d="M8 6.5h4M8 10h4M8 13.5h2"/>'],
     ['logout.php',    'Esci',      '<path d="M8 17H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4"/><path d="M13 14l4-4-4-4M17 10H8"/>'],
   ]; ?>
 <nav class="mbar">
@@ -58,6 +60,7 @@ function mbar(string $active, string $base = ''): void {
 <?php }
 
 function foot(): void { ?>
+<script src="assets/js/pdf.js?v=<?= @filemtime(APP_ROOT.'/assets/js/pdf.js') ?>"></script>
 <div class="foot wrap">3D WEB LAB · area riservata ai corsisti<br>
 I contenuti sono personali e non cedibili.</div>
 </body></html>

@@ -256,3 +256,45 @@ table.tb .ac{display:flex;gap:6px;justify-content:flex-end}
 .mbar a.on{color:var(--acc)}
 .mbar a svg{margin:0 auto 3px;display:block}
 .foot{padding:26px 0 34px;font-size:12.5px;color:var(--faint);text-align:center;line-height:1.7}
+
+/* ── appunti ──────────────────────────────────────────── */
+.notes .sv{font-size:12px;color:var(--dim);transition:color .2s}
+.notes .sv.on{color:var(--acc)}
+.notes .sv.ko{color:var(--bad)}
+.ntools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.nhint{font-size:12.5px;color:var(--dim)}
+.nta{min-height:170px;resize:vertical;line-height:1.7;font-size:15.5px}
+.jumps{display:none;flex-wrap:wrap;gap:6px;margin-bottom:11px}
+.jump{cursor:pointer;font-family:"Space Grotesk",monospace;font-size:12.5px;font-weight:600;
+  background:#0d1a20;color:var(--acc);border:1px solid #1d3f4b;border-radius:99px;padding:5px 12px;
+  transition:background .14s}
+.jump:hover{background:#123039}
+.nblock{margin-bottom:14px}
+.nblock .hd{align-items:flex-start}
+.ntxt{font-size:15.5px;line-height:1.75;color:var(--ink2);white-space:pre-line}
+.ntxt .ts{font-family:"Space Grotesk",monospace;font-size:13px;font-weight:600;color:var(--acc);
+  background:#0d1a20;border:1px solid #1d3f4b;border-radius:5px;padding:1px 7px;white-space:nowrap}
+.ntxt .ts:hover{background:#123039}
+.nfoot{margin-top:14px;padding-top:12px;border-top:1px solid var(--line2);font-size:12px;color:var(--faint)}
+
+/* ── visualizzatore PDF ───────────────────────────────── */
+.pv{position:fixed;inset:0;z-index:200;display:none;background:rgba(4,5,9,.86);backdrop-filter:blur(6px)}
+.pv.on{display:flex;flex-direction:column}
+.pv .pvh{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);
+  background:var(--card);flex:0 0 auto}
+.pv .pvh b{flex:1;min-width:0;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pv .pvb{flex:1;min-height:0;background:#1a1a1a}
+.pv iframe{width:100%;height:100%;border:0;display:block}
+.pv .pvx{background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:8px;
+  width:36px;height:36px;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
+.pv .pvx:hover{background:var(--card2)}
+body.noscroll{overflow:hidden}
+
+@media print{
+  .top,.mbar,.side,.player,.nav2,.btn,.ntools,.jumps,.foot,.pv{display:none!important}
+  body{background:#fff;color:#000}
+  .card{border:1px solid #ccc;background:#fff;break-inside:avoid}
+  .ntxt,.nfoot,.muted{color:#333}
+  .nta{border:1px solid #ccc;background:#fff;color:#000;min-height:auto}
+  a{color:#000;text-decoration:none}
+}

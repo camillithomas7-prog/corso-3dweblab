@@ -26,6 +26,10 @@ $s = db()->prepare('SELECT * FROM materials WHERE lesson_id=? ORDER BY pos, id')
 $s->execute([$id]);
 $mats = $s->fetchAll();
 
+$s = db()->prepare('SELECT body, updated_at FROM notes WHERE code_id=? AND lesson_id=?');
+$s->execute([$code['id'], $id]);
+$nota = $s->fetch() ?: ['body'=>'','updated_at'=>null];
+
 $cats = db()->query("SELECT * FROM categories WHERE published=1 ORDER BY pos, id")->fetchAll();
 $les  = db()->query("SELECT * FROM lessons WHERE published=1 ORDER BY pos, id")->fetchAll();
 $byCat = []; foreach ($les as $x) $byCat[(int)$x['category_id']][] = $x;
@@ -102,6 +106,28 @@ head($l['title']); topbar($code, '', 'corso.php'); ?>
       </div>
     </div>
 
+    <div class="card notes" style="margin-top:22px">
+      <div class="hd">
+        <h3>I tuoi appunti</h3>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="sv" id="sv"><?= $nota['updated_at'] ? 'salvati alle '.e(date('H:i', strtotime($nota['updated_at']))) : '' ?></span>
+          <button type="button" class="btn gh sm" id="stampa">Stampa</button>
+        </div>
+      </div>
+      <div class="bd">
+        <div class="ntools">
+          <button type="button" class="btn gh sm" id="mark">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"
+                 stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="5.6"/><path d="M7 4.2V7l1.9 1.1"/></svg>
+            Segna il minuto
+          </button>
+          <span class="nhint">Scrivi liberamente. Si salva da solo mentre scrivi.</span>
+        </div>
+        <div class="jumps" id="jumps"></div>
+        <textarea class="inp nta" id="nta" placeholder="Qui puoi annotare quello che ti serve ricordare di questa lezione…"><?= e($nota['body']) ?></textarea>
+      </div>
+    </div>
+
     <?php if ($mats): ?>
     <div class="card" style="margin-top:22px">
       <div class="hd"><h3>Materiali della lezione</h3><span class="pill"><?= count($mats) ?> file</span></div>
@@ -135,7 +161,9 @@ head($l['title']); topbar($code, '', 'corso.php'); ?>
   </main>
 </div>
 <script>
-const LID=<?= (int)$id ?>, START=<?= (int)$p['seconds'] ?>;
+const LID=<?= (int)$id ?>;
+const JUMP=parseInt(new URLSearchParams(location.search).get('t')||'0',10);
+const START=JUMP>0?JUMP:<?= (int)$p['seconds'] ?>;
 const v=document.getElementById('vid'), mk=document.getElementById('mk'), stl=document.getElementById('stlab');
 function save(sec,done){
   const b=new URLSearchParams({id:LID,seconds:Math.round(sec||0)});
@@ -157,5 +185,53 @@ function setDone(on){
   stl.className=on?'pill ok':''; stl.textContent=on?'Completata':'';
 }
 mk.addEventListener('click',()=>{ const on=mk.dataset.on==='1'; setDone(!on); save(v?v.currentTime:0,!on); });
+
+/* ── appunti ──────────────────────────────────────────── */
+const nta=document.getElementById('nta'), sv=document.getElementById('sv'), jumps=document.getElementById('jumps');
+const hhmm=s=>{s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
+  return h?`${h}:${String(m).padStart(2,'0')}:${String(x).padStart(2,'0')}`:`${m}:${String(x).padStart(2,'0')}`;};
+const toSec=t=>t.split(':').reverse().reduce((a,p,i)=>a+parseInt(p,10)*Math.pow(60,i),0);
+
+let tmr=null, last=nta.value;
+function salva(){
+  if(nta.value===last) return;
+  last=nta.value; sv.textContent='salvataggio…'; sv.className='sv on';
+  fetch('nota.php',{method:'POST',body:new URLSearchParams({id:LID,body:nta.value})})
+    .then(r=>r.ok?r.text():Promise.reject())
+    .then(t=>{sv.textContent='salvati alle '+t; sv.className='sv';})
+    .catch(()=>{sv.textContent='salvataggio non riuscito'; sv.className='sv ko';});
+}
+nta.addEventListener('input',()=>{ clearTimeout(tmr); tmr=setTimeout(salva,1200); disegnaSalti(); });
+nta.addEventListener('blur',salva);
+window.addEventListener('beforeunload',()=>{ if(nta.value!==last)
+  navigator.sendBeacon('nota.php',new URLSearchParams({id:LID,body:nta.value})); });
+
+// inserisce il minuto corrente del video al punto in cui stai scrivendo
+document.getElementById('mark').addEventListener('click',()=>{
+  const t=v?hhmm(v.currentTime):'0:00';
+  const p=nta.selectionStart, txt=nta.value;
+  const pre=txt.slice(0,p), post=txt.slice(p);
+  const ins=(pre && !pre.endsWith('\n')?'\n':'')+'['+t+'] ';
+  nta.value=pre+ins+post;
+  nta.focus(); nta.selectionStart=nta.selectionEnd=p+ins.length;
+  disegnaSalti(); clearTimeout(tmr); tmr=setTimeout(salva,600);
+});
+
+// i minuti annotati diventano pulsanti che riportano il video a quel punto
+function disegnaSalti(){
+  const found=[...new Set((nta.value.match(/\[(\d{1,2}:)?\d{1,2}:\d{2}\]/g)||[]))];
+  jumps.innerHTML='';
+  if(!found.length || !v){ jumps.style.display='none'; return; }
+  jumps.style.display='flex';
+  found.forEach(f=>{
+    const t=f.slice(1,-1), b=document.createElement('button');
+    b.type='button'; b.className='jump'; b.textContent=t;
+    b.title='Riporta il video a '+t;
+    b.onclick=()=>{ v.currentTime=toSec(t); v.play().catch(()=>{}); window.scrollTo({top:0,behavior:'smooth'}); };
+    jumps.appendChild(b);
+  });
+}
+disegnaSalti();
+document.getElementById('stampa').addEventListener('click',()=>window.print());
 </script>
 <?php mbar('corso.php'); foot();

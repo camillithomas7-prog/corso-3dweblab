@@ -81,6 +81,13 @@ function schema(PDO $p): void {
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (code_id, lesson_id));
 
+    CREATE TABLE IF NOT EXISTS notes(
+      code_id INTEGER NOT NULL REFERENCES codes(id) ON DELETE CASCADE,
+      lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+      body TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (code_id, lesson_id));
+
     CREATE INDEX IF NOT EXISTS ix_les_cat ON lessons(category_id, pos);
     CREATE INDEX IF NOT EXISTS ix_mat_les ON materials(lesson_id);
     ");
