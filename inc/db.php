@@ -88,9 +88,36 @@ function schema(PDO $p): void {
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (code_id, lesson_id));
 
+    CREATE TABLE IF NOT EXISTS hooks(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source TEXT NOT NULL DEFAULT 'shopify',
+      order_id TEXT NOT NULL DEFAULT '',
+      order_name TEXT NOT NULL DEFAULT '',
+      email TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT '',
+      note TEXT NOT NULL DEFAULT '',
+      code_id INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')));
+
     CREATE INDEX IF NOT EXISTS ix_les_cat ON lessons(category_id, pos);
     CREATE INDEX IF NOT EXISTS ix_mat_les ON materials(lesson_id);
+    CREATE INDEX IF NOT EXISTS ix_hooks ON hooks(created_at DESC);
     ");
+    migrate($p);
+}
+
+/** Colonne aggiunte dopo il primo rilascio: si applicano una volta sola. */
+function migrate(PDO $p): void {
+    $cols = array_column($p->query('PRAGMA table_info(codes)')->fetchAll(), 'name');
+    foreach ([
+        'shopify_order_id' => "TEXT NOT NULL DEFAULT ''",
+        'email_sent_at'    => "TEXT",
+        'email_error'      => "TEXT NOT NULL DEFAULT ''",
+    ] as $c => $def) {
+        if (!in_array($c, $cols, true)) $p->exec("ALTER TABLE codes ADD COLUMN $c $def");
+    }
+    $p->exec("CREATE UNIQUE INDEX IF NOT EXISTS ix_codes_order
+              ON codes(shopify_order_id) WHERE shopify_order_id <> ''");
 }
 
 function setting(string $k, ?string $def = null): ?string {

@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/inc.php';
+require_once dirname(__DIR__) . '/inc/mailer.php';
 require_admin();
 $made = [];
 
@@ -37,6 +38,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($a === 'del') {
         db()->prepare('DELETE FROM codes WHERE id=?')->execute([(int)$_POST['id']]);
         flash('Codice eliminato.');
+    } elseif ($a === 'mail') {
+        $q = db()->prepare('SELECT * FROM codes WHERE id=?'); $q->execute([(int)$_POST['id']]);
+        $c = $q->fetch();
+        if (!$c) flash('Codice inesistente.', 'err');
+        else try {
+            invia_codice($c);
+            db()->prepare("UPDATE codes SET email_sent_at=datetime('now'), email_error='' WHERE id=?")->execute([$c['id']]);
+            flash('Email inviata a ' . $c['email']);
+        } catch (Throwable $e) {
+            db()->prepare('UPDATE codes SET email_error=? WHERE id=?')->execute([$e->getMessage(), $c['id']]);
+            flash('Invio fallito: ' . $e->getMessage(), 'err');
+        }
     }
     back('codici.php');
 }
@@ -128,7 +141,7 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
   <?php if (!$rows): ?><div class="bd"><p class="muted"><?= $f ? 'Nessun risultato.' : 'Nessun codice generato.' ?></p></div>
   <?php else: ?>
   <div class="tw"><table class="tb">
-    <thead><tr><th>Codice</th><th>Cliente</th><th>Ordine</th><th>Stato</th><th>Accessi</th><th>Avanzamento</th><th></th></tr></thead>
+    <thead><tr><th>Codice</th><th>Cliente</th><th>Ordine</th><th>Stato</th><th>Email</th><th>Accessi</th><th>Avanzamento</th><th></th></tr></thead>
     <tbody><?php foreach ($rows as $r): $rev = $r['status']!=='active';
       $scad = $r['expires_at'] && $r['expires_at'] < date('Y-m-d'); ?>
       <tr>
@@ -140,10 +153,19 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
             <?php elseif ($scad): ?><span class="pill warn">scaduto</span>
             <?php elseif ($r['first_used_at']): ?><span class="pill ok">in uso</span>
             <?php else: ?><span class="pill">non usato</span><?php endif; ?></td>
+        <td><?php if (!$r['email']): ?><span class="muted" style="font-size:12.5px">—</span>
+            <?php elseif ($r['email_sent_at']): ?><span class="pill ok">inviata</span>
+            <?php elseif ($r['email_error']): ?><span class="pill bad" title="<?= e($r['email_error']) ?>">fallita</span>
+            <?php else: ?><span class="pill">da inviare</span><?php endif; ?></td>
         <td class="muted mono"><?= (int)$r['uses'] ?><?php if($r['last_used_at']): ?>
               <div style="font-size:11.5px"><?= e(date('d/m/y', strtotime($r['last_used_at']))) ?></div><?php endif; ?></td>
         <td class="muted mono"><?= $totLes ? ((int)$r['done'].' / '.$totLes) : '—' ?></td>
         <td><div class="ac">
+          <?php if ($r['email']): ?>
+          <form method="post"><input type="hidden" name="csrf" value="<?= csrf() ?>">
+            <input type="hidden" name="action" value="mail"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+            <button class="btn gh sm"><?= $r['email_sent_at'] ? 'Rimanda' : 'Invia email' ?></button></form>
+          <?php endif; ?>
           <a class="btn gh sm" href="codici.php?edit=<?= (int)$r['id'] ?>">Modifica</a>
           <form method="post"><input type="hidden" name="csrf" value="<?= csrf() ?>">
             <input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
