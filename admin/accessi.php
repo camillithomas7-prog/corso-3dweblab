@@ -12,6 +12,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         db()->prepare('INSERT INTO product_map(needle,category_id,note) VALUES(?,?,?)')
            ->execute([$needle, $cat, trim((string)$_POST['note'])]);
         flash('Collegamento creato.');
+    } elseif ($a === 'tutti') {
+        $cat = (int)$_POST['category_id'];
+        $n = db()->prepare("INSERT OR IGNORE INTO entitlements(code_id,category_id,source)
+                            SELECT id, ?, 'manuale' FROM codes");
+        $n->execute([$cat]);
+        flash('Modulo assegnato a ' . $n->rowCount() . ' corsisti che non lo avevano.');
+    } elseif ($a === 'orfani') {
+        $cat = (int)$_POST['category_id'];
+        $n = db()->prepare("INSERT OR IGNORE INTO entitlements(code_id,category_id,source)
+                            SELECT c.id, ?, 'manuale' FROM codes c
+                            WHERE NOT EXISTS (SELECT 1 FROM entitlements e WHERE e.code_id=c.id)");
+        $n->execute([$cat]);
+        flash('Modulo assegnato a ' . $n->rowCount() . ' corsisti che erano senza niente.');
+    } elseif ($a === 'togli') {
+        $cat = (int)$_POST['category_id'];
+        $n = db()->prepare("DELETE FROM entitlements WHERE category_id=? AND source IN ('iniziale','manuale')");
+        $n->execute([$cat]);
+        flash('Modulo tolto a ' . $n->rowCount() . ' corsisti. Chi lo ha comprato lo mantiene.');
     } elseif ($a === 'del') {
         db()->prepare('DELETE FROM product_map WHERE id=?')->execute([(int)$_POST['id']]);
         flash('Collegamento rimosso.');
@@ -25,7 +43,20 @@ $map  = db()->query('SELECT m.*, c.title FROM product_map m
 $attivo = gate_attivo();
 $ncodes = (int)db()->query('SELECT COUNT(*) FROM codes')->fetchColumn();
 
-ahead('Accessi', 'accessi.php'); show_flash(); ?>
+ahead('Accessi', 'accessi.php'); show_flash();
+?>
+<?php
+$tot = (int)db()->query('SELECT COUNT(*) FROM codes')->fetchColumn();
+$orfani = (int)db()->query('SELECT COUNT(*) FROM codes c
+    WHERE NOT EXISTS (SELECT 1 FROM entitlements e WHERE e.code_id=c.id)')->fetchColumn();
+$st = db()->query("SELECT k.id, k.title,
+    (SELECT COUNT(*) FROM entitlements e WHERE e.category_id=k.id) AS n,
+    (SELECT COUNT(*) FROM entitlements e WHERE e.category_id=k.id AND e.source='ordine') AS n_ord,
+    (SELECT COUNT(*) FROM entitlements e WHERE e.category_id=k.id AND e.source='manuale') AS n_man,
+    (SELECT COUNT(*) FROM entitlements e WHERE e.category_id=k.id AND e.source='iniziale') AS n_ini
+    FROM categories k ORDER BY k.pos, k.id")->fetchAll();
+?>
+
 <h1 style="font-size:23px;margin-bottom:6px">Accessi e upsell</h1>
 <p class="muted" style="margin-bottom:20px;font-size:14.5px">
   Colleghi un prodotto Shopify a un modulo del corso. All'arrivo di un ordine la piattaforma
@@ -36,8 +67,14 @@ ahead('Accessi', 'accessi.php'); show_flash(); ?>
     tutti i corsisti vedono tutti i moduli — così nessuno resta chiuso fuori per una configurazione
     lasciata a metà. Si accende da solo appena aggiungi la prima riga qui sotto.</div>
 <?php else: ?>
-  <div class="msg ok"><b>Il filtro è attivo.</b> I <?= $ncodes ?> corsisti già registrati mantengono
-    tutto ciò che vedevano prima. Dai nuovi ordini in poi contano i collegamenti qui sotto.</div>
+  <?php if ($orfani): ?>
+    <div class="msg err"><b>Attenzione: <?= $orfani ?> corsist<?= $orfani===1?'a non ha':'i non hanno' ?>
+      nessun modulo</b> e in questo momento apr<?= $orfani===1?'e':'ono' ?> il corso e non ved<?= $orfani===1?'e':'ono' ?>
+      niente. Sistemalo qui sotto con <b>Dai a chi è senza niente</b> sul modulo base.</div>
+  <?php else: ?>
+    <div class="msg ok"><b>Il filtro è attivo</b> e tutti i <?= $tot ?> corsisti hanno almeno un modulo.
+      Dai nuovi ordini in poi contano i collegamenti qui sotto.</div>
+  <?php endif; ?>
 <?php endif; ?>
 
 <div class="row c2" style="align-items:start;margin-bottom:22px">
@@ -81,6 +118,43 @@ ahead('Accessi', 'accessi.php'); show_flash(); ?>
         apri la sua <b>scheda</b> da Codici di accesso.</div>
     </div>
   </div>
+</div>
+
+<div class="card" style="margin-bottom:18px">
+  <div class="hd"><h3>Chi ha cosa</h3><span class="pill"><?= $tot ?> corsisti</span></div>
+  <?php if ($orfani): ?>
+    <div class="bd" style="padding-bottom:0"><div class="msg err">
+      <b><?= $orfani ?> corsist<?= $orfani===1?'a è'.' ' :'i sono ' ?>senza nessun modulo</b> e in questo momento
+      non vede niente. Succede ai codici creati a mano, o arrivati prima che i collegamenti esistessero.
+      Usa <b>Dai a chi è senza niente</b> sul modulo che devono avere.</div></div>
+  <?php endif; ?>
+  <div class="tw"><table class="tb">
+    <thead><tr><th>Modulo</th><th>Ce l'hanno</th><th>Da ordine</th><th>A mano</th><th>Storici</th><th></th></tr></thead>
+    <tbody><?php foreach ($st as $r): ?>
+      <tr>
+        <td><b><?= e($r['title']) ?></b></td>
+        <td class="mono"><?= (int)$r['n'] ?> <span class="muted">/ <?= $tot ?></span></td>
+        <td class="muted mono"><?= (int)$r['n_ord'] ?></td>
+        <td class="muted mono"><?= (int)$r['n_man'] ?></td>
+        <td class="muted mono"><?= (int)$r['n_ini'] ?></td>
+        <td><div class="ac">
+          <?php if ($orfani): ?>
+          <form method="post"><input type="hidden" name="csrf" value="<?= csrf() ?>">
+            <input type="hidden" name="action" value="orfani"><input type="hidden" name="category_id" value="<?= (int)$r['id'] ?>">
+            <button class="btn sm">Dai a chi è senza niente</button></form>
+          <?php endif; ?>
+          <form method="post" onsubmit="return confirm('Assegnare «<?= e($r['title']) ?>» a tutti i <?= $tot ?> corsisti?')">
+            <input type="hidden" name="csrf" value="<?= csrf() ?>">
+            <input type="hidden" name="action" value="tutti"><input type="hidden" name="category_id" value="<?= (int)$r['id'] ?>">
+            <button class="btn gh sm">Dai a tutti</button></form>
+          <form method="post" onsubmit="return confirm('Togliere «<?= e($r['title']) ?>» a chi non lo ha comprato?')">
+            <input type="hidden" name="csrf" value="<?= csrf() ?>">
+            <input type="hidden" name="action" value="togli"><input type="hidden" name="category_id" value="<?= (int)$r['id'] ?>">
+            <button class="btn dg sm">Togli a chi non l'ha comprato</button></form>
+        </div></td>
+      </tr>
+    <?php endforeach; ?></tbody>
+  </table></div>
 </div>
 
 <div class="card">
