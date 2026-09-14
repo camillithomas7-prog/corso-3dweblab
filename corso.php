@@ -86,8 +86,8 @@ head("Il tuo corso"); topbar($code, "", "corso.php"); ?>
         <div class="grid c2 c3">
           <?php foreach ($ll as $l): $ok = !empty($pr[(int)$l['id']]['completed']); ?>
           <a class="lcard" href="lezione.php?id=<?= (int)$l['id'] ?>">
-            <div class="th">
-              <?php if ($l['poster']): ?><img src="media.php?t=p&id=<?= (int)$l['id'] ?>" alt="" loading="lazy"><?php endif; ?>
+            <div class="th<?= empty($l['poster']) ? ' std' : '' ?>">
+              <img src="<?= e(poster_url($l)) ?>" alt="" loading="lazy">
               <?php if ($ok): ?><span class="pill ok dn">Completata</span><?php endif; ?>
               <span class="pl"><svg width="15" height="15" viewBox="0 0 15 15" fill="#fff"><path d="M4.5 2.9l7.5 4.6-7.5 4.6z"/></svg></span>
             </div>

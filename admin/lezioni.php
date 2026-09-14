@@ -133,9 +133,13 @@ ahead('Lezioni', 'lezioni.php'); show_flash(); ?>
       </div>
 
       <div class="fld"><label>Copertina (facoltativa)</label>
+        <div class="hint" style="margin:0 0 9px;display:flex;align-items:center;gap:11px">
+          <img src="../assets/img/poster-default.jpg" alt="" style="width:104px;border-radius:6px;border:1px solid var(--line)">
+          <span>Predefinita per tutti i video. Caricane una solo se vuoi sostituirla su questa lezione.</span>
+        </div>
         <div class="drop" id="dp" style="padding:16px">
           <div class="t" style="margin:0">Trascina un'immagine o clicca</div>
-          <div class="s">JPG o PNG, 16:9</div>
+          <div class="s">JPG o PNG, 16:9 — se non la metti si usa la copertina 3D WEB LAB</div>
         </div>
         <input type="file" id="fp" accept="image/jpeg,image/png,image/webp" hidden>
         <div class="upbar" id="dp-bar"><div class="lb"><b></b><span></span></div><div class="bar"><i style="width:0"></i></div></div>

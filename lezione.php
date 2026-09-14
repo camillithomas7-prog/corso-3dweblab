@@ -73,19 +73,21 @@ head($l['title']); topbar($code, '', 'corso.php'); ?>
     <div class="player">
       <?php if ($l['video_type']==='file' && $l['video_src']): ?>
         <video id="vid" controls playsinline preload="metadata" controlsList="nodownload"
-               oncontextmenu="return false"
-               <?= $l['poster'] ? 'poster="media.php?t=p&id='.(int)$l['id'].'"' : '' ?>>
+               oncontextmenu="return false" poster="<?= e(poster_url($l)) ?>">
           <source src="media.php?t=v&id=<?= (int)$l['id'] ?>" type="video/mp4">
         </video>
       <?php elseif ($l['video_type']==='url' && $l['video_src']): ?>
-        <video id="vid" controls playsinline preload="metadata" controlsList="nodownload">
+        <video id="vid" controls playsinline preload="metadata" controlsList="nodownload"
+               poster="<?= e(poster_url($l)) ?>">
           <source src="<?= e($l['video_src']) ?>" type="video/mp4">
         </video>
       <?php elseif ($l['video_type']==='embed' && $l['video_src']): ?>
         <iframe src="<?= e($l['video_src']) ?>" allow="autoplay; fullscreen; picture-in-picture"
                 allowfullscreen loading="lazy"></iframe>
       <?php else: ?>
-        <div class="none">Il video di questa lezione non è ancora disponibile.</div>
+        <div class="none" style="background:url('<?= e(poster_url($l)) ?>') center/cover">
+          <span style="background:rgba(6,7,12,.78);padding:12px 18px;border-radius:9px">
+            Il video di questa lezione non è ancora disponibile.</span></div>
       <?php endif; ?>
     </div>
 
