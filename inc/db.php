@@ -298,9 +298,10 @@ function seed_questions(PDO $p): void {
  * Gira una volta sola: la traccia resta in settings.
  */
 function backfill_entitlements(PDO $p): void {
-    $r = $p->prepare('SELECT v FROM settings WHERE k=?'); $r->execute(['entitlements_backfill']);
-    if ($r->fetchColumn()) return;
-    $p->exec("INSERT OR IGNORE INTO entitlements(code_id, category_id, source)
-              SELECT c.id, k.id, 'iniziale' FROM codes c CROSS JOIN categories k");
-    $p->prepare('INSERT INTO settings(k,v) VALUES(?,?)')->execute(['entitlements_backfill', date('c')]);
+    // Disinnescata. Era un CROSS JOIN codes x categories che assegnava ogni modulo
+    // a ogni corsista, e girava a ogni richiesta protetta solo dalla riga in settings:
+    // se quella riga mancava, ogni caricamento di pagina rimetteva tutti i moduli a
+    // tutti e i bottoni "Togli" sembravano non funzionare. Il recupero dei corsisti
+    // storici ora si fa a mano da Accessi, che e' esplicito e verificabile.
+    $p->exec("INSERT OR IGNORE INTO settings(k,v) VALUES('entitlements_backfill','disinnescato')");
 }

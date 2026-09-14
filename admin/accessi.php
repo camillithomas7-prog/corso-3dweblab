@@ -120,7 +120,7 @@ $st = db()->query("SELECT k.id, k.title,
   </div>
 </div>
 
-<div class="card" style="margin-bottom:18px">
+<div class="card" id="chi" style="margin-bottom:18px">
   <div class="hd"><h3>Chi ha cosa</h3><span class="pill"><?= $tot ?> corsisti</span></div>
   <?php if ($orfani): ?>
     <div class="bd" style="padding-bottom:0"><div class="msg err">
@@ -133,7 +133,8 @@ $st = db()->query("SELECT k.id, k.title,
     <tbody><?php foreach ($st as $r): ?>
       <tr>
         <td><b><?= e($r['title']) ?></b></td>
-        <td class="mono"><?= (int)$r['n'] ?> <span class="muted">/ <?= $tot ?></span></td>
+        <td class="mono"><a href="accessi.php?modulo=<?= (int)$r['id'] ?>#chi"
+             style="color:#6ee7ff"><?= (int)$r['n'] ?></a> <span class="muted">/ <?= $tot ?></span></td>
         <td class="muted mono"><?= (int)$r['n_ord'] ?></td>
         <td class="muted mono"><?= (int)$r['n_man'] ?></td>
         <td class="muted mono"><?= (int)$r['n_ini'] ?></td>
@@ -155,6 +156,42 @@ $st = db()->query("SELECT k.id, k.title,
       </tr>
     <?php endforeach; ?></tbody>
   </table></div>
+  <?php
+  $sel = (int)($_GET['modulo'] ?? 0);
+  if ($sel):
+      $q = db()->prepare("SELECT c.code, c.label, c.email, e.source, e.order_ref
+                          FROM codes c JOIN entitlements e ON e.code_id=c.id
+                          WHERE e.category_id=? ORDER BY e.source, c.id DESC");
+      $q->execute([$sel]);
+      $righe = $q->fetchAll();
+      $tit = '';
+      foreach ($st as $r) if ((int)$r['id'] === $sel) $tit = $r['title'];
+  ?>
+  <div class="bd" style="border-top:1px solid var(--line2)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <b>Chi ha «<?= e($tit) ?>»</b>
+      <span class="pill"><?= count($righe) ?></span>
+      <a class="btn gh sm" href="accessi.php" style="margin-left:auto">Chiudi</a>
+    </div>
+    <?php if (!$righe): ?>
+      <p class="muted" style="margin:0">Nessuno ha questo modulo.</p>
+    <?php else: ?>
+    <div class="tw"><table class="tb">
+      <thead><tr><th>Codice</th><th>Cliente</th><th>Come l'ha avuto</th></tr></thead>
+      <tbody><?php foreach ($righe as $x): ?>
+        <tr>
+          <td class="mono" style="color:#6ee7ff"><?= e($x['code']) ?></td>
+          <td><?= e($x['label'] ?: ($x['email'] ?: '—')) ?></td>
+          <td class="muted"><?php
+            echo ['ordine' => 'comprato', 'manuale' => 'assegnato a mano',
+                  'iniziale' => 'recupero storico'][$x['source']] ?? e($x['source']);
+            if ($x['source'] === 'ordine' && $x['order_ref']) echo ' · ' . e($x['order_ref']); ?></td>
+        </tr>
+      <?php endforeach; ?></tbody>
+    </table></div>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
 </div>
 
 <div class="card">
