@@ -60,11 +60,46 @@ if (!$ok) { traccia($base + ['status'=>'ignorato','note'=>'nessun prodotto corri
 $q = db()->prepare('SELECT * FROM codes WHERE shopify_order_id=?');
 $q->execute([$oid]);
 if ($gia = $q->fetch()) {
-    traccia($base + ['status'=>'duplicato','note'=>'codice già emesso: '.$gia['code'],'code_id'=>$gia['id']]);
+    traccia($base + ['status'=>'duplicato','note'=>'ordine già gestito: '.$gia['code'],'code_id'=>$gia['id']]);
     exit('già gestito');
 }
 
-// Genera il codice
+$items = $o['line_items'] ?? [];
+
+// Il cliente ha già un accesso? Allora niente secondo codice: si aggiunge al suo.
+$row = null; $ritorno = false;
+if ($mail !== '') {
+    $q = db()->prepare("SELECT * FROM codes WHERE lower(email)=lower(?) AND status='active'
+                        ORDER BY id LIMIT 1");
+    $q->execute([$mail]);
+    $row = $q->fetch() ?: null;
+    if ($row) $ritorno = true;
+}
+
+if ($ritorno) {
+    $nuovi = assegna_da_ordine((int)$row['id'], $items, $name);
+    if (!$nuovi) {
+        traccia($base + ['status'=>'nulla da aggiungere',
+                         'note'=>'cliente già in possesso di questi contenuti · '.$row['code'],
+                         'code_id'=>$row['id']]);
+        exit('niente di nuovo');
+    }
+    $titoli = [];
+    $t = db()->prepare('SELECT title FROM categories WHERE id=?');
+    foreach ($nuovi as $cid) { $t->execute([$cid]); $titoli[] = (string)$t->fetchColumn(); }
+    try {
+        invia_sblocco($row, $titoli);
+        traccia($base + ['status'=>'sblocco inviato',
+                         'note'=>implode(', ', $titoli).' → '.$row['code'], 'code_id'=>$row['id']]);
+        exit('ok');
+    } catch (Throwable $e) {
+        db()->prepare('UPDATE codes SET email_error=? WHERE id=?')->execute([$e->getMessage(), $row['id']]);
+        traccia($base + ['status'=>'email fallita','note'=>$e->getMessage(),'code_id'=>$row['id']]);
+        exit('sbloccato, email non inviata');
+    }
+}
+
+// Cliente nuovo: genera il codice
 $code = null;
 for ($i = 0; $i < 12; $i++) {
     try {
@@ -80,6 +115,7 @@ if (!$code) { traccia($base + ['status'=>'errore','note'=>'generazione codice fa
 
 $q = db()->prepare('SELECT * FROM codes WHERE code=?'); $q->execute([$code]);
 $row = $q->fetch();
+assegna_da_ordine((int)$row['id'], $items, $name);
 
 // Manda la mail. Se fallisce il codice resta valido: lo rimandi dal pannello.
 try {

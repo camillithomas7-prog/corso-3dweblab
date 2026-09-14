@@ -9,11 +9,18 @@ $s = db()->prepare('SELECT l.*, c.title AS cat FROM lessons l
 $s->execute([$id]);
 $l = $s->fetch();
 if (!$l) { header('Location: corso.php'); exit; }
+if (!modulo_permesso((int)$code['id'], $l['category_id'] === null ? null : (int)$l['category_id'])) {
+    header('Location: corso.php?chiuso=1'); exit;
+}
 
-$ord = db()->query("SELECT l.id, l.title FROM lessons l
-                    LEFT JOIN categories c ON c.id=l.category_id
-                    WHERE l.published=1 AND (c.published=1 OR c.id IS NULL)
-                    ORDER BY c.pos, c.id, l.pos, l.id")->fetchAll();
+$permessi = moduli_permessi((int)$code['id']);
+$okc = fn($cat) => $permessi === null || in_array((int)$cat, $permessi, true);
+$ord = array_values(array_filter(
+    db()->query("SELECT l.id, l.title, l.category_id FROM lessons l
+                 LEFT JOIN categories c ON c.id=l.category_id
+                 WHERE l.published=1 AND (c.published=1 OR c.id IS NULL)
+                 ORDER BY c.pos, c.id, l.pos, l.id")->fetchAll(),
+    fn($x) => $okc($x['category_id'])));
 $idx = array_search($id, array_column($ord, 'id'));
 $prev = $idx > 0 ? $ord[$idx-1] : null;
 $next = ($idx !== false && $idx < count($ord)-1) ? $ord[$idx+1] : null;
@@ -32,6 +39,7 @@ $nota = $s->fetch() ?: ['body'=>'','updated_at'=>null];
 
 $cats = db()->query("SELECT * FROM categories WHERE published=1 ORDER BY pos, id")->fetchAll();
 $les  = db()->query("SELECT * FROM lessons WHERE published=1 ORDER BY pos, id")->fetchAll();
+$les = array_values(array_filter($les, fn($x) => $okc($x['category_id'])));
 $byCat = []; foreach ($les as $x) $byCat[(int)$x['category_id']][] = $x;
 $pr = []; $q = db()->prepare('SELECT lesson_id, completed FROM progress WHERE code_id=?');
 $q->execute([$code['id']]); foreach ($q->fetchAll() as $r) $pr[(int)$r['lesson_id']] = $r;
@@ -45,7 +53,8 @@ head($l['title']); topbar($code, '', 'corso.php'); ?>
       <div class="t"><span>Avanzamento</span><b><?= $pct ?>%</b></div>
       <div class="bar"><i style="width:<?= $pct ?>%"></i></div>
     </div>
-    <?php foreach ($cats as $i=>$c): $ll = $byCat[(int)$c['id']] ?? []; if(!$ll) continue;
+    <?php foreach ($cats as $i=>$c): $ll = $byCat[(int)$c['id']] ?? [];
+      if (!$okc($c['id']) || !$ll) continue;
       $here = in_array($id, array_map(fn($x)=>(int)$x['id'], $ll), true); ?>
     <details class="cat" <?= $here?'open':'' ?>>
       <summary>

@@ -99,6 +99,23 @@ function schema(PDO $p): void {
       completed_at TEXT,
       updated_at TEXT NOT NULL DEFAULT (datetime('now')));
 
+    -- quale prodotto Shopify sblocca quale modulo
+    CREATE TABLE IF NOT EXISTS product_map(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      needle TEXT NOT NULL,                 -- id prodotto, id variante, SKU o parte del titolo
+      category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+      note TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')));
+
+    -- a cosa ha diritto ogni corsista
+    CREATE TABLE IF NOT EXISTS entitlements(
+      code_id INTEGER NOT NULL REFERENCES codes(id) ON DELETE CASCADE,
+      category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+      source TEXT NOT NULL DEFAULT 'ordine',   -- ordine | manuale | iniziale
+      order_ref TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (code_id, category_id));
+
     CREATE TABLE IF NOT EXISTS messages(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       code_id INTEGER NOT NULL REFERENCES codes(id) ON DELETE CASCADE,
@@ -163,6 +180,7 @@ function schema(PDO $p): void {
     migrate($p);
     seed_packages($p);
     seed_questions($p);
+    backfill_entitlements($p);
 }
 
 /** I tre pacchetti di partenza, inseriti una volta sola se la tabella è vuota. */
@@ -273,4 +291,16 @@ function seed_questions(PDO $p): void {
 
     $q->execute([$B, 'text', 'Come lo racconteresti a un amico, in una frase?',
         'Con parole tue, come lo diresti davvero.', '', 9]);
+}
+
+/**
+ * I corsisti che esistevano prima degli upsell mantengono tutto.
+ * Gira una volta sola: la traccia resta in settings.
+ */
+function backfill_entitlements(PDO $p): void {
+    $r = $p->prepare('SELECT v FROM settings WHERE k=?'); $r->execute(['entitlements_backfill']);
+    if ($r->fetchColumn()) return;
+    $p->exec("INSERT OR IGNORE INTO entitlements(code_id, category_id, source)
+              SELECT c.id, k.id, 'iniziale' FROM codes c CROSS JOIN categories k");
+    $p->prepare('INSERT INTO settings(k,v) VALUES(?,?)')->execute(['entitlements_backfill', date('c')]);
 }

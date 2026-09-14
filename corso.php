@@ -11,6 +11,12 @@ foreach ($q->fetchAll() as $r) $pr[(int)$r['lesson_id']] = $r;
 
 $byCat = [];
 foreach ($les as $l) $byCat[(int)$l['category_id']][] = $l;
+$permessi = moduli_permessi((int)$code['id']);
+$puo = fn($cat) => $permessi === null || in_array((int)$cat, $permessi, true);
+
+// l'avanzamento si calcola solo su ciò a cui ha diritto
+$les = array_values(array_filter($les, fn($l) => $puo($l['category_id'])));
+$byCat = []; foreach ($les as $l) $byCat[(int)$l['category_id']][] = $l;
 $tot  = count($les);
 $done = count(array_filter($pr, fn($p) => $p['completed']));
 $pct  = $tot ? round($done / $tot * 100) : 0;
@@ -26,7 +32,16 @@ head("Il tuo corso"); topbar($code, "", "corso.php"); ?>
       <div class="bar"><i style="width:<?= $pct ?>%"></i></div>
       <div class="t" style="margin:9px 0 0"><span><?= $done ?> di <?= $tot ?> lezioni completate</span></div>
     </div>
-    <?php foreach ($cats as $i => $c): $ll = $byCat[(int)$c['id']] ?? []; if (!$ll) continue; ?>
+    <?php foreach ($cats as $i => $c): $ll = $byCat[(int)$c['id']] ?? [];
+      if (!$puo($c['id'])): $n = (int)db()->query('SELECT COUNT(*) FROM lessons WHERE published=1 AND category_id='.(int)$c['id'])->fetchColumn(); ?>
+      <div class="cat locked">
+        <div class="lk">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round"><rect x="2.6" y="6" width="8.8" height="6.4" rx="1.4"/><path d="M4.6 6V4.3a2.4 2.4 0 0 1 4.8 0V6"/></svg>
+          <span class="tt"><b><?= e($c['title']) ?></b><span><?= $n ?> lezioni · non incluso</span></span>
+        </div>
+      </div>
+      <?php continue; endif; if (!$ll) continue; ?>
     <details class="cat" <?= $i === 0 ? 'open' : '' ?>>
       <summary>
         <span class="n"><?= str_pad((string)($i+1), 2, '0', STR_PAD_LEFT) ?></span>
@@ -77,7 +92,8 @@ head("Il tuo corso"); topbar($code, "", "corso.php"); ?>
       </div></div>
     <?php endif; ?>
 
-    <?php foreach ($cats as $c): $ll = $byCat[(int)$c['id']] ?? []; if (!$ll) continue; ?>
+    <?php foreach ($cats as $c): $ll = $byCat[(int)$c['id']] ?? [];
+      if (!$puo($c['id'])) continue; if (!$ll) continue; ?>
       <section style="margin-bottom:30px">
         <div style="margin-bottom:13px">
           <h2 style="font-size:19px"><?= e($c['title']) ?></h2>
@@ -101,6 +117,28 @@ head("Il tuo corso"); topbar($code, "", "corso.php"); ?>
         </div>
       </section>
     <?php endforeach; ?>
+    <?php $chiusi = array_values(array_filter($cats, fn($c) => !$puo($c['id'])));
+      if ($chiusi): ?>
+      <section class="upsell">
+        <h2>Non ancora nel tuo percorso</h2>
+        <p>Questi moduli esistono ma non fanno parte di quello che hai acquistato.</p>
+        <div class="ugrid">
+          <?php foreach ($chiusi as $c):
+            $n = (int)db()->query('SELECT COUNT(*) FROM lessons WHERE published=1 AND category_id='.(int)$c['id'])->fetchColumn(); ?>
+            <div class="ucard">
+              <span class="ulock">
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6"
+                     stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6.6" width="9" height="6.4" rx="1.4"/><path d="M5 6.6V4.8a2.5 2.5 0 0 1 5 0v1.8"/></svg>
+              </span>
+              <b><?= e($c['title']) ?></b>
+              <?php if ($c['descr']): ?><p><?= e($c['descr']) ?></p><?php endif; ?>
+              <span class="un"><?= $n ?> lezioni</span>
+            </div>
+          <?php endforeach; ?>
+        </div>
+        <a class="btn gh" href="supporto.php">Chiedici come sbloccarli</a>
+      </section>
+    <?php endif; ?>
   </main>
 </div>
 <?php mbar('corso.php'); foot();

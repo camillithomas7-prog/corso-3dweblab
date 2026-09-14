@@ -25,7 +25,7 @@ function ahead(string $title, string $active): void {
   <?php $nl = 0; try { $nl = unread_admin(); } catch (Throwable $e) {}
   foreach ([
     'dashboard.php'=>'Panoramica','categorie.php'=>'Categorie','lezioni.php'=>'Lezioni',
-    'materiali.php'=>'Materiali','codici.php'=>'Codici di accesso','domande.php'=>'Domande',
+    'materiali.php'=>'Materiali','codici.php'=>'Codici di accesso','accessi.php'=>'Accessi','domande.php'=>'Domande',
     'risposte.php'=>'Risposte','chat.php'=>'Supporto','pacchetti.php'=>'Pacchetti',
     'impostazioni.php'=>'Impostazioni'] as $h=>$l): ?>
     <a href="<?= $h ?>" class="<?= $active===$h?'on':'' ?>"><?= $l ?><?php

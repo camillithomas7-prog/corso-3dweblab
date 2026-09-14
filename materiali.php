@@ -6,6 +6,13 @@ $rows = db()->query("SELECT m.*, l.title AS ltitle, c.title AS ctitle
                      LEFT JOIN lessons l    ON l.id=m.lesson_id
                      LEFT JOIN categories c ON c.id=COALESCE(m.category_id, l.category_id)
                      ORDER BY c.pos, c.id, l.pos, l.id, m.pos, m.id")->fetchAll();
+$rows = array_values(array_filter($rows, function ($r) use ($code) {
+    $s = db()->prepare('SELECT COALESCE(m.category_id, l.category_id) FROM materials m
+                        LEFT JOIN lessons l ON l.id=m.lesson_id WHERE m.id=?');
+    $s->execute([$r['id']]);
+    $cat = $s->fetchColumn();
+    return $cat === null || $cat === false || modulo_permesso((int)$code['id'], (int)$cat);
+}));
 $g = [];
 foreach ($rows as $r) $g[$r['ctitle'] ?: 'Materiali generali'][] = $r;
 

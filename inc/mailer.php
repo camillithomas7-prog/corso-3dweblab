@@ -148,3 +148,52 @@ function mail_html(array $v, string $intro, string $firma): string {
   . nl2br($e($firma)) . '<br>Conserva questa mail: il codice serve a ogni accesso.</td></tr>
 </table></td></tr></table></body></html>';
 }
+
+/** Mail per chi aveva già un accesso e ha appena sbloccato altro. */
+function invia_sblocco(array $code, array $titoli): void {
+    $host = setting('smtp_host', ''); $user = setting('smtp_user', ''); $pass = setting('smtp_pass', '');
+    if (!$host || !$user || !$pass) throw new RuntimeException('SMTP non configurato in Impostazioni');
+    $to = trim((string)$code['email']);
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) throw new RuntimeException('indirizzo email mancante o non valido');
+
+    $base = rtrim(setting('site_url', ''), '/');
+    if (!$base) $base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+                      . '://' . ($_SERVER['HTTP_HOST'] ?? '');
+    $corso = setting('course_name', '3D WEB LAB');
+    $nome  = $code['label'] ?: '';
+    $e = fn($x) => htmlspecialchars((string)$x, ENT_QUOTES, 'UTF-8');
+    $lista_html = '';
+    foreach ($titoli as $t) $lista_html .= '<li style="margin-bottom:6px">' . $e($t) . '</li>';
+    $lista_txt = "- " . implode("\n- ", $titoli);
+
+    $subject = 'Hai sbloccato nuovi contenuti su ' . $corso;
+    $html = '<!doctype html><html><body style="margin:0;padding:0;background:#f4f4f6">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f6;padding:28px 12px">
+<tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#0e1018;border-radius:14px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+  <tr><td style="padding:30px 30px 6px"><div style="font-size:19px;font-weight:700;color:#f4f6fb;letter-spacing:-.02em">'
+  . $e($corso) . '</div></td></tr>
+  <tr><td style="padding:14px 30px 0;color:#a4aec6;font-size:15px;line-height:1.65">'
+  . ($nome ? 'Ciao ' . $e($nome) . ',' : 'Ciao,') . '<br>grazie per il tuo acquisto. Da adesso trovi dentro il corso anche:</td></tr>
+  <tr><td style="padding:18px 30px 0">
+    <div style="background:#141826;border:1px solid #1f2536;border-radius:11px;padding:18px 20px">
+      <ul style="margin:0;padding-left:18px;color:#6ee7ff;font-size:16px;font-weight:600">' . $lista_html . '</ul>
+    </div></td></tr>
+  <tr><td style="padding:22px 30px 0" align="center">
+    <a href="' . $e($base) . '/index.php" style="display:inline-block;background:#6ee7ff;color:#0a0b12;text-decoration:none;font-size:15px;font-weight:700;padding:14px 30px;border-radius:9px">Entra nel corso</a>
+  </td></tr>
+  <tr><td style="padding:18px 30px 0;color:#6c7790;font-size:13px;line-height:1.6" align="center">
+    Usi il codice di sempre: <b style="color:#a4aec6;letter-spacing:.08em">' . $e($code['code']) . '</b><br>
+    Non serve registrarsi né crearne uno nuovo.</td></tr>
+  <tr><td style="padding:26px 30px 30px;border-top:1px solid #1f2536;color:#4a5368;font-size:12.5px;line-height:1.6">'
+  . nl2br($e(setting('mail_sign', $corso))) . '</td></tr>
+</table></td></tr></table></body></html>';
+
+    $text = ($nome ? "Ciao $nome,\n" : "Ciao,\n")
+          . "grazie per il tuo acquisto. Da adesso trovi dentro il corso anche:\n\n"
+          . $lista_txt . "\n\nEntra qui: " . $base . "/index.php"
+          . "\nCodice di sempre: " . $code['code'] . "\n";
+
+    (new Smtp($host, (int)setting('smtp_port', '465'), $user, $pass, setting('smtp_sec', 'ssl')))
+        ->send(setting('smtp_from', $user), setting('smtp_name', '3D WEB LAB'), $to, $subject, $html, $text);
+}

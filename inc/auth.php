@@ -127,6 +127,62 @@ function check_csrf(): void {
         http_response_code(419); exit('Sessione scaduta, ricarica la pagina.');
     }
 }
+/**
+ * Il filtro dei moduli è spento finché non colleghi almeno un prodotto:
+ * così nessuno resta chiuso fuori per una configurazione incompleta.
+ */
+function gate_attivo(): bool {
+    static $v = null;
+    if ($v === null) $v = (int)db()->query('SELECT COUNT(*) FROM product_map')->fetchColumn() > 0;
+    return $v;
+}
+
+/** Id dei moduli a cui il corsista ha diritto. null = tutti. */
+function moduli_permessi(int $code_id): ?array {
+    if (!gate_attivo()) return null;
+    static $c = [];
+    if (!isset($c[$code_id])) {
+        $s = db()->prepare('SELECT category_id FROM entitlements WHERE code_id=?');
+        $s->execute([$code_id]);
+        $c[$code_id] = array_map('intval', array_column($s->fetchAll(), 'category_id'));
+    }
+    return $c[$code_id];
+}
+function modulo_permesso(int $code_id, ?int $cat): bool {
+    $p = moduli_permessi($code_id);
+    return $p === null || ($cat !== null && in_array($cat, $p, true));
+}
+
+/** Assegna i moduli di una riga d'ordine. Restituisce quelli nuovi. */
+function assegna_da_ordine(int $code_id, array $line_items, string $order_ref = ''): array {
+    $map = db()->query('SELECT needle, category_id FROM product_map')->fetchAll();
+    if (!$map) return [];
+    $ins = db()->prepare("INSERT OR IGNORE INTO entitlements(code_id,category_id,source,order_ref)
+                          VALUES(?,?,'ordine',?)");
+    $nuovi = [];
+    foreach ($line_items as $li) {
+        $campi = [(string)($li['product_id'] ?? ''), (string)($li['variant_id'] ?? ''),
+                  (string)($li['sku'] ?? ''), (string)($li['title'] ?? '')];
+        foreach ($map as $m) {
+            $ago = trim((string)$m['needle']);
+            if ($ago === '') continue;
+            $trovato = false;
+            foreach ($campi as $c) {
+                if ($c === '') continue;
+                if ($c === $ago) { $trovato = true; break; }
+                if (!ctype_digit($ago) && stripos($c, $ago) !== false) { $trovato = true; break; }
+            }
+            if (!$trovato) continue;
+            $gia = db()->prepare('SELECT 1 FROM entitlements WHERE code_id=? AND category_id=?');
+            $gia->execute([$code_id, (int)$m['category_id']]);
+            if ($gia->fetchColumn()) continue;
+            $ins->execute([$code_id, (int)$m['category_id'], $order_ref]);
+            $nuovi[] = (int)$m['category_id'];
+        }
+    }
+    return array_values(array_unique($nuovi));
+}
+
 /** Messaggi non letti dal corsista (scritti dall'admin). */
 function unread_user(int $code_id): int {
     $s = db()->prepare("SELECT COUNT(*) FROM messages WHERE code_id=? AND sender='admin' AND read_user=0");
