@@ -99,6 +99,25 @@ function schema(PDO $p): void {
       completed_at TEXT,
       updated_at TEXT NOT NULL DEFAULT (datetime('now')));
 
+    CREATE TABLE IF NOT EXISTS questions(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      section TEXT NOT NULL DEFAULT '',
+      type TEXT NOT NULL DEFAULT 'single',   -- single | text
+      label TEXT NOT NULL,
+      help TEXT NOT NULL DEFAULT '',
+      options TEXT NOT NULL DEFAULT '',      -- una per riga, solo per single
+      required INTEGER NOT NULL DEFAULT 1,
+      pos INTEGER NOT NULL DEFAULT 0,
+      published INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')));
+
+    CREATE TABLE IF NOT EXISTS answers(
+      code_id INTEGER NOT NULL REFERENCES codes(id) ON DELETE CASCADE,
+      question_id INTEGER NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+      value TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (code_id, question_id));
+
     CREATE TABLE IF NOT EXISTS packages(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -132,6 +151,7 @@ function schema(PDO $p): void {
     ");
     migrate($p);
     seed_packages($p);
+    seed_questions($p);
 }
 
 /** I tre pacchetti di partenza, inseriti una volta sola se la tabella è vuota. */
@@ -174,6 +194,9 @@ function seed_packages(PDO $p): void {
 /** Colonne aggiunte dopo il primo rilascio: si applicano una volta sola. */
 function migrate(PDO $p): void {
     $cols = array_column($p->query('PRAGMA table_info(codes)')->fetchAll(), 'name');
+    $pc = array_column($p->query('PRAGMA table_info(profiles)')->fetchAll(), 'name');
+    if (!in_array('quiz_at', $pc, true)) $p->exec('ALTER TABLE profiles ADD COLUMN quiz_at TEXT');
+
     foreach ([
         'shopify_order_id' => "TEXT NOT NULL DEFAULT ''",
         'email_sent_at'    => "TEXT",
@@ -193,4 +216,50 @@ function setting(string $k, ?string $def = null): ?string {
 function set_setting(string $k, string $v): void {
     db()->prepare('INSERT INTO settings(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=excluded.v')
         ->execute([$k, $v]);
+}
+
+/** Le domande di partenza, inserite una volta sola. */
+function seed_questions(PDO $p): void {
+    if ((int)$p->query('SELECT COUNT(*) FROM questions')->fetchColumn() > 0) return;
+    $q = $p->prepare('INSERT INTO questions(section,type,label,help,options,pos) VALUES(?,?,?,?,?,?)');
+    $A = 'Due parole su di te';
+    $B = 'La tua esperienza';
+
+    $q->execute([$A, 'single', 'Cosa fai oggi principalmente?', '',
+        "Lavoro dipendente, cerco un'entrata in più\n"
+      . "Freelance web, grafica o social\n"
+      . "Ho un'agenzia o uno studio\n"
+      . "Ho un'attività in un altro settore\n"
+      . "Studio, o sono senza lavoro in questo momento", 1]);
+
+    $q->execute([$A, 'single', 'Quanti siti hai fatto in vita tua?', '',
+        "Zero\nQualcuno per me o per amici\nLi faccio già per clienti paganti\nNe faccio tanti, è il mio lavoro", 2]);
+
+    $q->execute([$A, 'single', "Con l'intelligenza artificiale a che punto sei?", '',
+        "Non l'ho mai usata per costruire niente\n"
+      . "La uso per scrivere testi e basta\n"
+      . "Ci ho già provato a farci codice ma mi sono bloccato\n"
+      . "Ci lavoro già tutti i giorni", 3]);
+
+    $q->execute([$A, 'single', 'Cosa vuoi ottenere nei prossimi tre mesi?', '',
+        "Il primo cliente pagante, punto\n"
+      . "1.000-2.000 € al mese in più\n"
+      . "Sostituire il mio lavoro attuale\n"
+      . "Alzare i prezzi ai clienti che ho già\n"
+      . "Imparare, i soldi vengono dopo", 4]);
+
+    $q->execute([$A, 'single', 'Quante ore a settimana ci puoi mettere davvero?', 'Sii onesto, serve a noi per capire come aiutarti.',
+        "Da 0 a 3 ore\nDa 4 a 7 ore\nDa 8 a 15 ore\nPiù di 15 ore", 5]);
+
+    $q->execute([$B, 'text', "Qual è stata la cosa precisa che ti ha fatto dire «ok, lo compro»?",
+        'Anche una frase sola. Quello che ti è passato per la testa in quel momento.', '', 6]);
+
+    $q->execute([$B, 'text', 'Cosa ti ha fatto esitare un attimo prima di pagare?',
+        'Puoi essere schietto: ci serve proprio quello.', '', 7]);
+
+    $q->execute([$B, 'text', 'Prima di arrivare qui, cosa avevi già provato per ottenere lo stesso risultato?',
+        'Corsi, video, tentativi da solo, persone a cui ti sei rivolto.', '', 8]);
+
+    $q->execute([$B, 'text', 'Come lo racconteresti a un amico, in una frase?',
+        'Con parole tue, come lo diresti davvero.', '', 9]);
 }

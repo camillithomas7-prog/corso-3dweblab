@@ -357,3 +357,54 @@ body.noscroll{overflow:hidden}
 .sched dd{margin:0;font-size:15.5px;font-weight:500}
 .sched dd.mono{font-family:"Space Grotesk",monospace;letter-spacing:.03em}
 .sched dd a{color:var(--acc)}
+
+/* ── questionario ─────────────────────────────────────── */
+.qwrap{max-width:760px;padding-top:34px}
+.qhead{margin-bottom:26px}
+.qlogo{height:44px;width:auto;margin-bottom:24px}
+.qhead h1{font-size:clamp(23px,4.4vw,33px);line-height:1.14;margin-bottom:11px}
+.qhead p{font-size:16.5px;color:var(--ink2);line-height:1.7;max-width:60ch}
+.qsec{display:flex;align-items:center;gap:14px;margin:26px 0 14px}
+.qsec span{font-size:11.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--acc)}
+.qsec:after{content:"";flex:1;height:1px;background:var(--line2)}
+.qcard{display:grid;grid-template-columns:34px minmax(0,1fr);gap:14px;
+  background:var(--card);border:1px solid var(--line2);border-radius:12px;padding:20px 18px;margin-bottom:12px}
+@media(min-width:620px){.qcard{grid-template-columns:40px minmax(0,1fr);gap:18px;padding:22px 22px}}
+.qcard.bad{border-color:#5a2626;background:#120e0f}
+.qn{width:28px;height:28px;border-radius:50%;background:var(--card2);color:var(--acc);
+  font-size:13px;font-weight:700;display:grid;place-items:center}
+.qcard.bad .qn{background:#2a1414;color:var(--bad)}
+.qbody h3{font-size:17.5px;line-height:1.4;margin-bottom:4px}
+.qhelp{font-size:13.5px;color:var(--dim);line-height:1.6;margin-bottom:4px}
+.qopts{display:grid;gap:8px;margin-top:14px}
+.qopt{display:flex;align-items:flex-start;gap:12px;padding:13px 15px;cursor:pointer;
+  background:#0a0c14;border:1px solid var(--line);border-radius:9px;transition:border-color .14s,background .14s}
+.qopt:hover{border-color:#2f4a5a;background:#0c1119}
+.qopt.on{border-color:var(--acc);background:#0c1a20}
+.qopt input{position:absolute;opacity:0;pointer-events:none}
+.qopt .dot{flex:0 0 auto;width:17px;height:17px;border-radius:50%;border:2px solid #39445c;margin-top:2px;
+  display:grid;place-items:center;transition:border-color .14s}
+.qopt.on .dot{border-color:var(--acc)}
+.qopt.on .dot:after{content:"";width:8px;height:8px;border-radius:50%;background:var(--acc)}
+.qopt .tx{font-size:15.5px;line-height:1.45}
+.qopt.on .tx{color:var(--ink)}
+.qta{margin-top:13px;min-height:86px;line-height:1.65}
+.qfoot{margin-top:24px;text-align:center}
+.qfoot p{margin-top:12px;font-size:13px;color:var(--dim)}
+
+/* ── analisi risposte in admin ────────────────────────── */
+.qres{margin-bottom:16px}
+.qres .qh{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:13px}
+.qres .qh b{font-size:16.5px;font-weight:600}
+.qres .qh span{font-size:12.5px;color:var(--dim)}
+.brow{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;margin-bottom:11px}
+@media(min-width:620px){.brow{grid-template-columns:minmax(0,240px) minmax(0,1fr) 92px;gap:14px;align-items:center}}
+.brow .bl{font-size:14.5px;color:var(--ink2);line-height:1.4}
+.brow .bt{height:9px;border-radius:5px;background:#151a26;overflow:hidden}
+.brow .bt i{display:block;height:100%;background:var(--grad);border-radius:5px}
+.brow .bv{font-family:"Space Grotesk",monospace;font-size:13.5px;color:var(--ink);text-align:right}
+.brow .bv em{font-style:normal;color:var(--dim);font-size:12px}
+.quote{border-left:2px solid var(--line);padding:10px 0 10px 15px;margin-bottom:12px}
+.quote p{font-size:15.5px;color:var(--ink);line-height:1.65}
+.quote .who{margin-top:7px;font-size:12.5px;color:var(--dim)}
+.quote .who a{color:var(--acc)}

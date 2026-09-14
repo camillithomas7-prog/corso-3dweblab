@@ -24,7 +24,8 @@ function ahead(string $title, string $active): void {
 <nav class="anav">
   <?php foreach ([
     'dashboard.php'=>'Panoramica','categorie.php'=>'Categorie','lezioni.php'=>'Lezioni',
-    'materiali.php'=>'Materiali','codici.php'=>'Codici di accesso','pacchetti.php'=>'Pacchetti',
+    'materiali.php'=>'Materiali','codici.php'=>'Codici di accesso','domande.php'=>'Domande',
+    'risposte.php'=>'Risposte','pacchetti.php'=>'Pacchetti',
     'impostazioni.php'=>'Impostazioni'] as $h=>$l): ?>
     <a href="<?= $h ?>" class="<?= $active===$h?'on':'' ?>"><?= $l ?></a>
   <?php endforeach; ?>

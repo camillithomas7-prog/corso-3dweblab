@@ -33,14 +33,25 @@ function profile_done(int $code_id): bool {
     $p = profile($code_id);
     return $p && $p['completed_at'];
 }
+/** Il questionario è già stato compilato? Vale per sempre: se aggiungi
+ *  domande dopo, chi ha già risposto non viene rimandato indietro. */
+function quiz_done(int $code_id): bool {
+    $p = profile($code_id);
+    return $p && !empty($p['quiz_at']);
+}
+function quiz_exists(): bool {
+    return (int)db()->query('SELECT COUNT(*) FROM questions WHERE published=1')->fetchColumn() > 0;
+}
 
 function require_code(): array {
     $c = current_code();
     if (!$c) { header('Location: index.php'); exit; }
     // al primo accesso i dati vanno compilati prima di entrare nel corso
     $here = basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
-    if (!in_array($here, ['profilo.php', 'logout.php'], true) && !profile_done((int)$c['id'])) {
-        header('Location: profilo.php'); exit;
+    $libere = ['profilo.php', 'questionario.php', 'logout.php'];
+    if (!in_array($here, $libere, true)) {
+        if (!profile_done((int)$c['id'])) { header('Location: profilo.php'); exit; }
+        if (!quiz_done((int)$c['id']) && quiz_exists()) { header('Location: questionario.php'); exit; }
     }
     return $c;
 }

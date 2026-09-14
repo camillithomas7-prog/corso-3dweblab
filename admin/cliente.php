@@ -12,6 +12,11 @@ $q = db()->prepare('SELECT COUNT(*) FROM progress WHERE code_id=? AND completed=
 $done = (int)$q->fetchColumn();
 $q = db()->prepare('SELECT COUNT(*) FROM notes WHERE code_id=? AND body<>\'\''); $q->execute([$id]);
 $nn = (int)$q->fetchColumn();
+$q = db()->prepare("SELECT q.label, q.type, q.pos, a.value FROM answers a
+                    JOIN questions q ON q.id=a.question_id
+                    WHERE a.code_id=? AND a.value<>'' ORDER BY q.pos, q.id");
+$q->execute([$id]); $risp = $q->fetchAll();
+
 $q = db()->prepare("SELECT l.title, p.completed, p.seconds, p.updated_at
                     FROM progress p JOIN lessons l ON l.id=p.lesson_id
                     WHERE p.code_id=? ORDER BY p.updated_at DESC LIMIT 12");
@@ -51,6 +56,23 @@ ahead('Scheda cliente', 'codici.php'); show_flash(); ?>
     <?php else: ?>
       <p class="muted">Nessun dato ancora. Quello che sai di lui è solo ciò che è arrivato dall'ordine.</p>
     <?php endif; ?>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:18px">
+  <div class="hd"><h3>Risposte al questionario</h3>
+    <?php if ($p && !empty($p['quiz_at'])): ?>
+      <span class="pill ok">compilato il <?= e(date('d/m/Y', strtotime($p['quiz_at']))) ?></span>
+    <?php else: ?><span class="pill warn">non ancora compilato</span><?php endif; ?></div>
+  <div class="bd">
+    <?php if (!$risp): ?>
+      <p class="muted">Nessuna risposta. Il questionario si apre al primo accesso, subito dopo i dati personali.</p>
+    <?php else: foreach ($risp as $r): ?>
+      <div class="quote" style="border-left-color:<?= $r['type']==='text' ? 'var(--acc)' : 'var(--line)' ?>">
+        <div class="who" style="margin:0 0 6px"><?= e($r['label']) ?></div>
+        <p><?= nl2br(e($r['value'])) ?></p>
+      </div>
+    <?php endforeach; endif; ?>
   </div>
 </div>
 
