@@ -43,62 +43,129 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$sez = [];
-foreach ($qs as $q) $sez[$q['section'] ?: 'Domande'][] = $q;
 $n = 0;
+$primo_err = 0;
+if ($err) { $ks = array_keys($err); $primo_err = (int)$ks[0]; }
 
 head('Questionario');
 if ($fatto) topbar($code, '', ''); ?>
-<div class="wrap qwrap" style="padding-bottom:90px">
-  <div class="qhead">
-    <?php if (!$fatto): ?><img class="qlogo" src="assets/img/logo-light.png" alt="3D WEB LAB"><?php endif; ?>
-    <div class="kicker" style="margin-bottom:9px">Ultimo passaggio</div>
-    <h1><?= $fatto ? 'Le tue risposte' : 'Aiutaci a fare un corso migliore' ?></h1>
-    <p><?= $fatto
-      ? 'Puoi rivederle e correggerle quando vuoi.'
-      : 'Nove domande, meno di tre minuti. Ci servono per capire chi sei e per migliorare il corso a ogni versione. Le risposte restano fra noi.' ?></p>
-    <?php if (isset($_GET['ok'])): ?><div class="msg ok" style="margin-top:16px">Risposte aggiornate.</div><?php endif; ?>
-    <?php if ($err): ?><div class="msg err" style="margin-top:16px">
-      Mancano <?= count($err) ?> risposte. Sono tutte obbligatorie: le trovi segnate qui sotto.</div><?php endif; ?>
+<div class="wrap qwrap" style="padding-bottom:60px">
+
+  <?php if (!$fatto): ?><img class="qlogo" src="assets/img/logo-light.png" alt="3D WEB LAB"><?php endif; ?>
+
+  <div class="qbar">
+    <div class="qbt"><i id="qfill" style="width:0%"></i></div>
+    <div class="qbl">
+      <span id="qstep">Domanda 1 di <?= count($qs) ?></span>
+      <span id="qleft"></span>
+    </div>
   </div>
 
-  <form method="post" novalidate>
+  <?php if (isset($_GET['ok'])): ?><div class="msg ok">Risposte aggiornate.</div><?php endif; ?>
+  <?php if ($err): ?><div class="msg err">Mancano <?= count($err) ?> risposte: te le ho riaperte.</div><?php endif; ?>
+
+  <form method="post" novalidate id="qform">
     <input type="hidden" name="csrf" value="<?= csrf() ?>">
-    <?php foreach ($sez as $titolo => $lista): ?>
-      <div class="qsec"><span><?= e((string)$titolo) ?></span></div>
-      <?php foreach ($lista as $q): $id = (int)$q['id']; $n++; $bad = isset($err[$id]); ?>
-        <div class="qcard<?= $bad ? ' bad' : '' ?>">
-          <div class="qn"><?= $n ?></div>
-          <div class="qbody">
-            <h3><?= e($q['label']) ?></h3>
-            <?php if ($q['help']): ?><p class="qhelp"><?= e($q['help']) ?></p><?php endif; ?>
 
-            <?php if ($q['type'] === 'single'):
-              $opz = array_filter(array_map('trim', preg_split('/\r?\n/', trim($q['options'])))); ?>
-              <div class="qopts">
-                <?php foreach ($opz as $k => $o): ?>
-                  <label class="qopt<?= ($val[$id] ?? '') === $o ? ' on' : '' ?>">
-                    <input type="radio" name="q[<?= $id ?>]" value="<?= e($o) ?>"
-                           <?= ($val[$id] ?? '') === $o ? 'checked' : '' ?>>
-                    <span class="dot"></span><span class="tx"><?= e($o) ?></span>
-                  </label>
-                <?php endforeach; ?>
-              </div>
-            <?php else: ?>
-              <textarea class="inp qta" name="q[<?= $id ?>]" rows="3"
-                        placeholder="Scrivi con parole tue…"><?= e($val[$id] ?? '') ?></textarea>
-            <?php endif; ?>
+    <?php foreach ($qs as $i => $q): $id = (int)$q['id']; $bad = isset($err[$id]); ?>
+      <section class="slide" data-i="<?= $i ?>" data-id="<?= $id ?>"
+               data-type="<?= e($q['type']) ?>" data-req="<?= (int)$q['required'] ?>" hidden>
+        <?php if ($q['section']): ?><div class="qsec2"><?= e($q['section']) ?></div><?php endif; ?>
+        <h2><?= e($q['label']) ?></h2>
+        <?php if ($q['help']): ?><p class="qhelp"><?= e($q['help']) ?></p><?php endif; ?>
 
-            <?php if ($bad): ?><div class="ferr"><?= e($err[$id]) ?></div><?php endif; ?>
+        <?php if ($q['type'] === 'single'):
+          $opz = array_filter(array_map('trim', preg_split('/\r?\n/', trim($q['options'])))); ?>
+          <div class="qopts">
+            <?php foreach ($opz as $o): ?>
+              <label class="qopt<?= ($val[$id] ?? '') === $o ? ' on' : '' ?>">
+                <input type="radio" name="q[<?= $id ?>]" value="<?= e($o) ?>"
+                       <?= ($val[$id] ?? '') === $o ? 'checked' : '' ?>>
+                <span class="dot"></span><span class="tx"><?= e($o) ?></span>
+              </label>
+            <?php endforeach; ?>
           </div>
-        </div>
-      <?php endforeach; ?>
+        <?php else: ?>
+          <textarea class="inp qta" name="q[<?= $id ?>]" rows="4"
+                    placeholder="Scrivi con parole tue, anche poche righe…"><?= e($val[$id] ?? '') ?></textarea>
+        <?php endif; ?>
+
+        <div class="ferr sferr" <?= $bad ? '' : 'hidden' ?>><?= e($err[$id] ?? '') ?></div>
+      </section>
     <?php endforeach; ?>
 
-    <div class="qfoot">
-      <button class="btn w"><?= $fatto ? 'Salva le modifiche' : 'Ho finito, entra nel corso' ?></button>
-      <?php if (!$fatto): ?><p>Tutte le domande sono obbligatorie.</p><?php endif; ?>
+    <div class="qnav">
+      <button type="button" class="btn gh" id="prev" hidden>Indietro</button>
+      <button type="button" class="btn" id="next">Avanti</button>
+      <button type="submit" class="btn" id="fine" hidden><?= $fatto ? 'Salva le modifiche' : 'Ho finito, entra nel corso' ?></button>
     </div>
+    <div class="qdots" id="dots"></div>
   </form>
 </div>
+
+<script>
+const S=[...document.querySelectorAll('.slide')], N=S.length;
+const fill=document.getElementById('qfill'), step=document.getElementById('qstep'),
+      left=document.getElementById('qleft'), prev=document.getElementById('prev'),
+      next=document.getElementById('next'), fine=document.getElementById('fine'),
+      dots=document.getElementById('dots');
+let i=<?= $primo_err ?: 0 ?>;
+<?php if ($primo_err): ?>i=S.findIndex(s=>+s.dataset.id===<?= $primo_err ?>); if(i<0) i=0;<?php endif; ?>
+
+S.forEach((_,k)=>{ const d=document.createElement('span'); d.className='qdot'; dots.appendChild(d); });
+
+function risposta(s){
+  if(s.dataset.type==='single'){ const r=s.querySelector('input:checked'); return r?r.value:''; }
+  return s.querySelector('textarea').value.trim();
+}
+function valida(s,mostra){
+  const v=risposta(s), req=s.dataset.req==='1', box=s.querySelector('.sferr');
+  let msg='';
+  if(req && !v) msg = s.dataset.type==='single' ? 'Scegli una risposta.' : 'Questa risposta ci serve.';
+  else if(req && s.dataset.type==='text' && v.length<3) msg='Scrivi qualcosa in più, anche solo una frase.';
+  if(mostra){ box.textContent=msg; box.hidden=!msg; }
+  return !msg;
+}
+function mostra(k){
+  i=Math.max(0,Math.min(N-1,k));
+  S.forEach((s,x)=>s.hidden = x!==i);
+  const pc=Math.round((i)/N*100);
+  fill.style.width=pc+'%';
+  step.textContent='Domanda '+(i+1)+' di '+N;
+  const m=N-i-1;
+  left.textContent = m===0 ? 'ultima' : (m===1 ? 'ne manca 1' : 'ne mancano '+m);
+  prev.hidden = i===0;
+  next.hidden = i===N-1;
+  fine.hidden = i!==N-1;
+  [...dots.children].forEach((d,x)=>{
+    d.className='qdot'+(x===i?' on':'')+(x<i||valida(S[x],false)&&x!==i?' ok':'');
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+  const t=S[i].querySelector('textarea'); if(t) setTimeout(()=>t.focus(),120);
+}
+function avanti(){ if(!valida(S[i],true)) return; if(i<N-1) mostra(i+1); }
+next.addEventListener('click',avanti);
+prev.addEventListener('click',()=>mostra(i-1));
+
+S.forEach(s=>{
+  s.querySelectorAll('.qopt input').forEach(r=>{
+    r.addEventListener('change',()=>{
+      s.querySelectorAll('.qopt').forEach(l=>l.classList.remove('on'));
+      r.closest('.qopt').classList.add('on');
+      s.querySelector('.sferr').hidden=true;
+      setTimeout(()=>{ if(i<N-1) mostra(i+1); else mostra(i); },260);
+    });
+  });
+  const t=s.querySelector('textarea');
+  if(t){
+    t.addEventListener('input',()=>{ if(t.value.trim().length>=3) s.querySelector('.sferr').hidden=true; });
+    t.addEventListener('keydown',e=>{ if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){ e.preventDefault(); avanti(); }});
+  }
+});
+document.getElementById('qform').addEventListener('submit',e=>{
+  const primo=S.findIndex(s=>!valida(s,false));
+  if(primo>=0){ e.preventDefault(); mostra(primo); valida(S[primo],true); }
+});
+mostra(i);
+</script>
 <?php if ($fatto) mbar(''); foot();

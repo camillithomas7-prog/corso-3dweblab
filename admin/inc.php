@@ -22,12 +22,14 @@ function ahead(string $title, string $active): void {
 </div></div>
 <div class="wrap" style="padding-top:20px;padding-bottom:60px">
 <nav class="anav">
-  <?php foreach ([
+  <?php $nl = 0; try { $nl = unread_admin(); } catch (Throwable $e) {}
+  foreach ([
     'dashboard.php'=>'Panoramica','categorie.php'=>'Categorie','lezioni.php'=>'Lezioni',
     'materiali.php'=>'Materiali','codici.php'=>'Codici di accesso','domande.php'=>'Domande',
-    'risposte.php'=>'Risposte','pacchetti.php'=>'Pacchetti',
+    'risposte.php'=>'Risposte','chat.php'=>'Supporto','pacchetti.php'=>'Pacchetti',
     'impostazioni.php'=>'Impostazioni'] as $h=>$l): ?>
-    <a href="<?= $h ?>" class="<?= $active===$h?'on':'' ?>"><?= $l ?></a>
+    <a href="<?= $h ?>" class="<?= $active===$h?'on':'' ?>"><?= $l ?><?php
+      if ($h === 'chat.php' && $nl): ?><span class="nb"><?= $nl ?></span><?php endif; ?></a>
   <?php endforeach; ?>
 </nav>
 <?php }

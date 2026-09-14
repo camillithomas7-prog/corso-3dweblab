@@ -99,6 +99,17 @@ function schema(PDO $p): void {
       completed_at TEXT,
       updated_at TEXT NOT NULL DEFAULT (datetime('now')));
 
+    CREATE TABLE IF NOT EXISTS messages(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code_id INTEGER NOT NULL REFERENCES codes(id) ON DELETE CASCADE,
+      sender TEXT NOT NULL,               -- utente | admin
+      body TEXT NOT NULL,
+      read_admin INTEGER NOT NULL DEFAULT 0,
+      read_user  INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')));
+
+    CREATE INDEX IF NOT EXISTS ix_msg ON messages(code_id, id);
+
     CREATE TABLE IF NOT EXISTS questions(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       section TEXT NOT NULL DEFAULT '',

@@ -127,6 +127,26 @@ function check_csrf(): void {
         http_response_code(419); exit('Sessione scaduta, ricarica la pagina.');
     }
 }
+/** Messaggi non letti dal corsista (scritti dall'admin). */
+function unread_user(int $code_id): int {
+    $s = db()->prepare("SELECT COUNT(*) FROM messages WHERE code_id=? AND sender='admin' AND read_user=0");
+    $s->execute([$code_id]); return (int)$s->fetchColumn();
+}
+/** Messaggi non letti dall'admin, in tutte le conversazioni. */
+function unread_admin(): int {
+    return (int)db()->query("SELECT COUNT(*) FROM messages WHERE sender='utente' AND read_admin=0")->fetchColumn();
+}
+/** Un messaggio pronto da mostrare. */
+function msg_row(array $m): array {
+    return [
+        'id'   => (int)$m['id'],
+        'mine' => false,
+        'body' => (string)$m['body'],
+        'who'  => $m['sender'],
+        'at'   => date('d/m H:i', strtotime($m['created_at'])),
+    ];
+}
+
 function e(?string $s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 function hms(int $s): string {
     if ($s <= 0) return '—';

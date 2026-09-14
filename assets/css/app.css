@@ -20,6 +20,8 @@ input,select,textarea,button{font:inherit;color:inherit}
 @media(min-width:768px){.wrap{padding:0 24px}}
 .mono{font-variant-numeric:tabular-nums;letter-spacing:.04em}
 .hide{display:none!important}
+/* le regole di display sulle classi scavalcano l'attributo hidden del browser */
+[hidden]{display:none!important}
 
 /* ── topbar ───────────────────────────────────────────── */
 .top{position:sticky;top:0;z-index:60;background:rgba(6,7,12,.9);backdrop-filter:blur(12px);
@@ -408,3 +410,83 @@ body.noscroll{overflow:hidden}
 .quote p{font-size:15.5px;color:var(--ink);line-height:1.65}
 .quote .who{margin-top:7px;font-size:12.5px;color:var(--dim)}
 .quote .who a{color:var(--acc)}
+
+/* ── chat di supporto ─────────────────────────────────── */
+.chatwrap{max-width:820px;padding-top:26px;padding-bottom:90px}
+.chead{margin-bottom:20px}
+.chead h1{font-size:clamp(22px,4.2vw,30px);line-height:1.15;margin-bottom:10px}
+.chead p{font-size:16px;color:var(--ink2);line-height:1.68;max-width:62ch}
+.chat{background:var(--card);border:1px solid var(--line2);border-radius:14px;overflow:hidden;
+  display:flex;flex-direction:column}
+.cscroll{padding:18px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;
+  min-height:300px;max-height:min(58vh,520px);scroll-behavior:smooth}
+.cscroll::-webkit-scrollbar{width:6px}
+.cscroll::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+.cempty{margin:auto;text-align:center;display:grid;justify-items:center;gap:6px;padding:26px 16px}
+.cempty b{font-size:16px;color:var(--ink2);margin-top:8px}
+.cempty span{font-size:14px;color:var(--dim)}
+.bub{max-width:min(80%,520px);padding:11px 14px;border-radius:14px;position:relative;word-break:break-word}
+.bub p{font-size:15.5px;line-height:1.6;margin:0;white-space:pre-wrap}
+.bub .nm{display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--acc);margin-bottom:4px}
+.bub .tm{display:block;margin-top:5px;font-size:11px;opacity:.6}
+.bub.me{align-self:flex-end;background:#123643;border:1px solid #1d4b5b;border-bottom-right-radius:5px}
+.bub.me .tm{text-align:right}
+.bub.them{align-self:flex-start;background:var(--card2);border:1px solid var(--line);border-bottom-left-radius:5px}
+.cbar{display:flex;gap:9px;align-items:flex-end;padding:12px;border-top:1px solid var(--line2);background:var(--card)}
+.cbar textarea{flex:1;min-height:44px;max-height:150px;resize:none;background:#0a0c14;
+  border:1px solid var(--line);border-radius:11px;padding:12px 13px;font-size:15.5px;line-height:1.5}
+.cbar textarea:focus{outline:none;border-color:#2f6f80;box-shadow:0 0 0 3px rgba(110,231,255,.10)}
+.csend{flex:0 0 auto;width:44px;height:44px;border:0;border-radius:11px;cursor:pointer;
+  background:var(--grad);color:#0a0b12;display:grid;place-items:center;transition:filter .14s}
+.csend:hover{filter:brightness(1.08)}
+.cnote{margin-top:11px;font-size:12.5px;color:var(--dim);text-align:center}
+.cnote b{color:var(--ink2)}
+
+/* elenco conversazioni in admin */
+.cgrid{display:grid;gap:16px}
+@media(min-width:940px){.cgrid{grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}}
+.clist{display:grid;gap:8px;max-height:none}
+@media(min-width:940px){.clist{max-height:calc(100dvh - 210px);overflow-y:auto}}
+.citem{display:block;position:relative;padding:14px 15px;border-radius:11px;background:var(--card);
+  border:1px solid var(--line2);transition:border-color .14s,background .14s}
+.citem:hover{border-color:#2b3448;background:var(--card2)}
+.citem.on{border-color:var(--acc);background:#0c1a20}
+.citem .ct{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+.citem .ct b{flex:1;min-width:0;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbadge{flex:0 0 auto;min-width:20px;height:20px;padding:0 6px;border-radius:99px;background:var(--acc);
+  color:#08131a;font-size:11.5px;font-weight:700;display:grid;place-items:center}
+.citem p{font-size:13px;color:var(--dim);line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0}
+.citem .cw{display:block;margin-top:5px;font-size:11.5px;color:var(--faint)}
+.anav .nb{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;margin-left:6px;
+  border-radius:99px;background:var(--acc);color:#08131a;font-size:11px;font-weight:700}
+.tnav a .cnt.hot{background:var(--acc);color:#08131a}
+.mbar a .mdot{position:absolute;top:6px;margin-left:12px;width:7px;height:7px;border-radius:50%;background:var(--acc)}
+.mbar a{position:relative}
+
+/* ── questionario a schermate ─────────────────────────── */
+.qwrap{max-width:640px}
+.qbar{position:sticky;top:0;z-index:40;padding:16px 0 14px;margin-bottom:8px;
+  background:linear-gradient(var(--bg) 72%,transparent)}
+.qbt{height:6px;border-radius:4px;background:#141a26;overflow:hidden}
+.qbt i{display:block;height:100%;background:var(--grad);border-radius:4px;transition:width .35s ease}
+.qbl{display:flex;justify-content:space-between;gap:12px;margin-top:9px;font-size:12.5px}
+.qbl #qstep{font-weight:600;color:var(--ink2)}
+.qbl #qleft{color:var(--acc)}
+.slide{animation:sin .28s ease}
+@keyframes sin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.qsec2{font-size:11.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--acc);margin-bottom:12px}
+.slide h2{font-size:clamp(21px,4.4vw,28px);line-height:1.22;letter-spacing:-.02em}
+.slide .qhelp{margin-top:10px;font-size:15px;color:var(--dim);line-height:1.6}
+.slide .qopts{margin-top:22px;gap:10px}
+.slide .qopt{padding:15px 17px}
+.slide .qopt .tx{font-size:16px}
+.slide .qta{margin-top:20px;min-height:130px;font-size:16px}
+.sferr{margin-top:12px}
+.qnav{display:flex;gap:10px;margin-top:26px}
+.qnav .btn{flex:1;justify-content:center}
+.qnav .btn.gh{flex:0 0 auto;min-width:120px}
+.qdots{display:flex;justify-content:center;gap:6px;margin-top:22px}
+.qdot{width:7px;height:7px;border-radius:50%;background:#232b3a;transition:background .2s,transform .2s}
+.qdot.ok{background:#2f6f80}
+.qdot.on{background:var(--acc);transform:scale(1.4)}
