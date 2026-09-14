@@ -41,7 +41,16 @@ head("Il tuo corso"); topbar($code, "", "corso.php"); ?>
           <span class="tt"><b><?= e($c['title']) ?></b><span><?= $n ?> lezioni · non incluso</span></span>
         </div>
       </div>
-      <?php continue; endif; if (!$ll) continue; ?>
+      <?php continue; endif; ?>
+      <?php if (!$ll): ?>
+      <div class="cat soon">
+        <div class="lk">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6"
+               stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="5.4"/><path d="M7 4.2V7l1.9 1.3"/></svg>
+          <span class="tt"><b><?= e($c['title']) ?></b><span>in arrivo</span></span>
+        </div>
+      </div>
+      <?php continue; endif; ?>
     <details class="cat" <?= $i === 0 ? 'open' : '' ?>>
       <summary>
         <span class="n"><?= str_pad((string)($i+1), 2, '0', STR_PAD_LEFT) ?></span>
@@ -93,7 +102,17 @@ head("Il tuo corso"); topbar($code, "", "corso.php"); ?>
     <?php endif; ?>
 
     <?php foreach ($cats as $c): $ll = $byCat[(int)$c['id']] ?? [];
-      if (!$puo($c['id'])) continue; if (!$ll) continue; ?>
+      if (!$puo($c['id'])) continue;
+      if (!$ll): ?>
+      <section style="margin-bottom:30px">
+        <div style="margin-bottom:13px"><h2 style="font-size:19px"><?= e($c['title']) ?></h2></div>
+        <div class="card soonc"><div class="bd">
+          <h3 style="margin-bottom:8px">Le lezioni stanno arrivando</h3>
+          <p class="muted">Questo modulo è già tuo. Appena pubblichiamo le prime lezioni le trovi qui,
+            non devi rifare nulla.</p>
+        </div></div>
+      </section>
+      <?php continue; endif; ?>
       <section style="margin-bottom:30px">
         <div style="margin-bottom:13px">
           <h2 style="font-size:19px"><?= e($c['title']) ?></h2>
