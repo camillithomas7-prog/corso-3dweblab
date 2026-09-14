@@ -88,6 +88,22 @@ function schema(PDO $p): void {
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (code_id, lesson_id));
 
+    CREATE TABLE IF NOT EXISTS packages(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      kicker TEXT NOT NULL DEFAULT '',
+      intro TEXT NOT NULL DEFAULT '',
+      bullets TEXT NOT NULL DEFAULT '',
+      price REAL NOT NULL DEFAULT 0,
+      price_was REAL NOT NULL DEFAULT 0,
+      period TEXT NOT NULL DEFAULT '',
+      note TEXT NOT NULL DEFAULT '',
+      badge TEXT NOT NULL DEFAULT '',
+      featured INTEGER NOT NULL DEFAULT 0,
+      pos INTEGER NOT NULL DEFAULT 0,
+      published INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')));
+
     CREATE TABLE IF NOT EXISTS hooks(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       source TEXT NOT NULL DEFAULT 'shopify',
