@@ -13,11 +13,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ord = trim((string)($_POST['order_ref'] ?? ''));
         $em  = trim((string)($_POST['email'] ?? ''));
         $exp = trim((string)($_POST['expires_at'] ?? '')) ?: null;
+        $mods = array_map('intval', (array)($_POST['mods'] ?? []));
         $ins = db()->prepare('INSERT INTO codes(code,label,order_ref,email,expires_at) VALUES(?,?,?,?,?)');
+        $ent = db()->prepare("INSERT OR IGNORE INTO entitlements(code_id,category_id,source) VALUES(?,?,'manuale')");
         for ($i = 0; $i < $n; $i++) {
             for ($try = 0; $try < 12; $try++) {
                 $c = generate_code();
-                try { $ins->execute([$c, $lab, $ord, $em, $exp]); $made[] = $c; break; }
+                try {
+                    $ins->execute([$c, $lab, $ord, $em, $exp]);
+                    $cid = (int)db()->lastInsertId();
+                    foreach ($mods as $m) $ent->execute([$cid, $m]);
+                    $made[] = $c; break;
+                }
                 catch (PDOException $e) { /* collisione improbabile: riprova */ }
             }
         }
@@ -116,6 +123,17 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
         <div class="fld"><label>Scadenza <span class="muted">(facoltativa)</span></label>
           <input class="inp" type="date" name="expires_at" value="<?= e($ed['expires_at'] ?? '') ?>">
           <div class="hint">Vuoto = accesso a vita.</div></div>
+        <?php if (!$ed):
+          $cats = db()->query('SELECT id,title FROM categories ORDER BY pos,id')->fetchAll();
+          if ($cats): ?>
+          <div class="fld"><label>Moduli da sbloccare</label>
+            <?php foreach ($cats as $i => $k): ?>
+              <label class="chk" style="margin-top:9px"><input type="checkbox" name="mods[]"
+                value="<?= (int)$k['id'] ?>" <?= $i === 0 ? 'checked' : '' ?>> <?= e($k['title']) ?></label>
+            <?php endforeach; ?>
+            <div class="hint">Se non ne spunti nessuno il cliente entra ma non vede niente.
+              Per gli upsell spunta anche il modulo corrispondente.</div></div>
+        <?php endif; endif; ?>
         <button class="btn w"><?= $ed?'Salva':'Genera' ?></button>
       </form>
     </div>
