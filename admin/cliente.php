@@ -2,6 +2,26 @@
 require_once __DIR__ . '/inc.php';
 require_admin();
 $id = (int)($_GET['id'] ?? 0);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    check_csrf();
+    $cid = (int)$_POST['id'];
+    if (($_POST['action'] ?? '') === 'moduli') {
+        $vuole = array_map('intval', (array)($_POST['cat'] ?? []));
+        $ora = db()->prepare('SELECT category_id, source FROM entitlements WHERE code_id=?');
+        $ora->execute([$cid]);
+        $ha = [];
+        foreach ($ora->fetchAll() as $r) $ha[(int)$r['category_id']] = $r['source'];
+
+        $add = db()->prepare("INSERT OR IGNORE INTO entitlements(code_id,category_id,source) VALUES(?,?,'manuale')");
+        $del = db()->prepare('DELETE FROM entitlements WHERE code_id=? AND category_id=?');
+        $n = 0;
+        foreach ($vuole as $c) if (!isset($ha[$c])) { $add->execute([$cid, $c]); $n++; }
+        foreach (array_keys($ha) as $c) if (!in_array($c, $vuole, true)) { $del->execute([$cid, $c]); $n++; }
+        flash($n ? "Moduli aggiornati ($n modifiche)." : 'Nessuna modifica.');
+    }
+    back('cliente.php?id=' . $cid);
+}
 $s = db()->prepare('SELECT * FROM codes WHERE id=?'); $s->execute([$id]);
 $c = $s->fetch();
 if (!$c) back('codici.php');
@@ -55,6 +75,58 @@ ahead('Scheda cliente', 'codici.php'); show_flash(); ?>
     </dl>
     <?php else: ?>
       <p class="muted">Nessun dato ancora. Quello che sai di lui è solo ciò che è arrivato dall'ordine.</p>
+    <?php endif; ?>
+  </div>
+</div>
+
+<?php
+$cats = db()->query('SELECT * FROM categories ORDER BY pos, id')->fetchAll();
+$e = db()->prepare('SELECT category_id, source, order_ref FROM entitlements WHERE code_id=?');
+$e->execute([$id]);
+$ent = [];
+foreach ($e->fetchAll() as $r) $ent[(int)$r['category_id']] = $r;
+$gate = gate_attivo();
+?>
+<div class="card" style="margin-bottom:18px">
+  <div class="hd"><h3>Moduli sbloccati</h3>
+    <?php if (!$gate): ?><span class="pill">filtro spento · vede tutto</span>
+    <?php else: ?><span class="pill acc"><?= count($ent) ?> su <?= count($cats) ?></span><?php endif; ?></div>
+  <div class="bd">
+    <?php if (!$gate): ?>
+      <p class="muted" style="margin-bottom:16px">Non hai ancora collegato nessun prodotto in
+        <a href="accessi.php" style="color:var(--acc)">Accessi</a>, quindi tutti i corsisti vedono tutti i
+        moduli. Quello che spunti qui vale da quando accenderai il filtro.</p>
+    <?php endif; ?>
+    <?php if (!$cats): ?><p class="muted">Nessuna categoria creata.</p><?php else: ?>
+    <form method="post">
+      <input type="hidden" name="csrf" value="<?= csrf() ?>">
+      <input type="hidden" name="action" value="moduli">
+      <input type="hidden" name="id" value="<?= $id ?>">
+      <div class="modlist">
+        <?php foreach ($cats as $c): $k = (int)$c['id']; $on = isset($ent[$k]);
+          $src = $on ? $ent[$k]['source'] : ''; ?>
+          <label class="modrow<?= $on ? ' on' : '' ?>">
+            <input type="checkbox" name="cat[]" value="<?= $k ?>" <?= $on ? 'checked' : '' ?>>
+            <span class="box"></span>
+            <span class="tx">
+              <b><?= e($c['title']) ?></b>
+              <span><?php
+                if (!$on) echo 'non incluso';
+                elseif ($src === 'ordine') echo 'da ordine' . ($ent[$k]['order_ref'] ? ' ' . e($ent[$k]['order_ref']) : '');
+                elseif ($src === 'manuale') echo 'assegnato a mano';
+                else echo 'accesso storico';
+              ?></span>
+            </span>
+          </label>
+        <?php endforeach; ?>
+      </div>
+      <button class="btn sm" style="margin-top:16px">Salva moduli</button>
+    </form>
+    <script>
+    document.querySelectorAll('.modrow input').forEach(function(c){
+      c.addEventListener('change', function(){ c.closest('.modrow').classList.toggle('on', c.checked); });
+    });
+    </script>
     <?php endif; ?>
   </div>
 </div>
