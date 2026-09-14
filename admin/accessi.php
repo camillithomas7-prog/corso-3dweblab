@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         db()->prepare('DELETE FROM product_map WHERE id=?')->execute([(int)$_POST['id']]);
         flash('Collegamento rimosso.');
     }
-    back('accessi.php');
+    back(in_array($a, ['tutti','orfani','togli'], true) ? 'accessi.php?fatto=1#chi' : 'accessi.php');
 }
 
 $cats = db()->query('SELECT * FROM categories ORDER BY pos, id')->fetchAll();
@@ -43,7 +43,10 @@ $map  = db()->query('SELECT m.*, c.title FROM product_map m
 $attivo = gate_attivo();
 $ncodes = (int)db()->query('SELECT COUNT(*) FROM codes')->fetchColumn();
 
-ahead('Accessi', 'accessi.php'); show_flash();
+ahead('Accessi', 'accessi.php');
+$fl = flash();                       // lo mostro nella tabella se arriva da li'
+$giu = isset($_GET['fatto']);
+if ($fl && !$giu) echo '<div class="msg ' . e($fl['t']) . '">' . e($fl['m']) . '</div>';
 ?>
 <?php
 $tot = (int)db()->query('SELECT COUNT(*) FROM codes')->fetchColumn();
@@ -122,6 +125,10 @@ $st = db()->query("SELECT k.id, k.title,
 
 <div class="card" id="chi" style="margin-bottom:18px">
   <div class="hd"><h3>Chi ha cosa</h3><span class="pill"><?= $tot ?> corsisti</span></div>
+  <?php if ($fl && $giu): ?>
+    <div class="bd" style="padding-bottom:0"><div class="msg <?= e($fl['t']) ?>" style="margin:0">
+      <?= e($fl['m']) ?></div></div>
+  <?php endif; ?>
   <?php if ($orfani): ?>
     <div class="bd" style="padding-bottom:0"><div class="msg err">
       <b><?= $orfani ?> corsist<?= $orfani===1?'a è'.' ' :'i sono ' ?>senza nessun modulo</b> e in questo momento
