@@ -9,82 +9,115 @@ $last = $msgs ? (int)end($msgs)['id'] : 0;
 $p = profile((int)$code['id']);
 $nome = $p ? trim($p['first_name']) : '';
 
-head('Supporto'); topbar($code, '', 'supporto.php'); ?>
-<div class="wrap chatwrap">
-  <div class="chead">
-    <div class="kicker" style="margin-bottom:8px">Supporto</div>
-    <h1>Scrivici pure</h1>
-    <p>Sei bloccato su qualcosa, non ti torna un passaggio, hai un problema con l'accesso.
-       Scrivi qui: rispondiamo appena possibile, di solito in giornata.</p>
-  </div>
+/** «Oggi», «Ieri» o la data per esteso. */
+function giorno(string $ts): string {
+    $d = date('Y-m-d', strtotime($ts));
+    if ($d === date('Y-m-d')) return 'Oggi';
+    if ($d === date('Y-m-d', strtotime('-1 day'))) return 'Ieri';
+    return date('j/n/Y', strtotime($ts));
+}
 
-  <div class="chat" id="chat">
-    <div class="cscroll" id="scroll">
-      <div class="cempty" id="empty" <?= $msgs ? 'hidden' : '' ?>>
-        <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="#3a4459" stroke-width="1.5"
+head('Supporto'); topbar($code, '', 'supporto.php'); ?>
+<style>.foot{display:none}</style>
+
+<div class="msgr">
+  <header class="mh">
+    <span class="av">
+      <img src="assets/img/favicon.png" alt="">
+      <i class="on"></i>
+    </span>
+    <span class="mt">
+      <b>3D WEB LAB</b>
+      <span>Supporto · di solito rispondiamo in giornata</span>
+    </span>
+  </header>
+
+  <div class="mscroll" id="scroll">
+    <?php if (!$msgs): ?>
+      <div class="mempty" id="empty">
+        <svg width="34" height="34" viewBox="0 0 30 30" fill="none" stroke="#3a4459" stroke-width="1.4"
              stroke-linecap="round" stroke-linejoin="round">
           <path d="M25 18a3 3 0 0 1-3 3H9l-5 4V8a3 3 0 0 1 3-3h15a3 3 0 0 1 3 3Z"/></svg>
-        <b><?= $nome ? 'Ciao ' . e($nome) . ',' : 'Nessun messaggio' ?></b>
-        <span>non hai ancora scritto niente. Comincia quando vuoi.</span>
+        <b><?= $nome ? 'Ciao ' . e($nome) : 'Nessun messaggio' ?></b>
+        <span>Sei bloccato su un passaggio, non ti torna qualcosa, hai un problema con l'accesso?
+              Scrivici pure, leggiamo tutto.</span>
       </div>
-      <?php foreach ($msgs as $m): ?>
+    <?php else: $gprec = ''; ?>
+      <?php foreach ($msgs as $m): $g = giorno($m['created_at']);
+        if ($g !== $gprec): $gprec = $g; ?>
+          <div class="mday" data-day="<?= e($g) ?>"><span><?= e($g) ?></span></div>
+        <?php endif; ?>
         <div class="bub <?= $m['sender'] === 'utente' ? 'me' : 'them' ?>" data-id="<?= (int)$m['id'] ?>">
-          <?php if ($m['sender'] !== 'utente'): ?><span class="nm">3D WEB LAB</span><?php endif; ?>
           <p><?= nl2br(e($m['body'])) ?></p>
-          <span class="tm"><?= e(date('d/m H:i', strtotime($m['created_at']))) ?></span>
+          <span class="tm"><?= e(date('H:i', strtotime($m['created_at']))) ?></span>
         </div>
       <?php endforeach; ?>
-    </div>
-
-    <form class="cbar" id="form">
-      <textarea id="txt" rows="1" placeholder="Scrivi un messaggio…" maxlength="4000"></textarea>
-      <button class="csend" type="submit" aria-label="Invia">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor"
-             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M16 2 8.5 9.5M16 2l-4.8 14-2.7-6.5L2 6.8 16 2Z"/></svg>
-      </button>
-    </form>
+    <?php endif; ?>
   </div>
-  <p class="cnote">Invio con <b>Invio</b>, a capo con <b>Maiusc + Invio</b>.</p>
+
+  <form class="mbarr" id="form">
+    <textarea id="txt" rows="1" placeholder="Scrivi un messaggio" maxlength="4000"
+              autocomplete="off" autocapitalize="sentences"></textarea>
+    <button class="msend" type="submit" aria-label="Invia" disabled>
+      <svg width="19" height="19" viewBox="0 0 18 18" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M16 2 8.5 9.5M16 2l-4.8 14-2.7-6.5L2 6.8 16 2Z"/></svg>
+    </button>
+  </form>
 </div>
 
 <script>
 const CSRF=<?= json_encode(csrf()) ?>;
-let last=<?= $last ?>, busy=false;
+let last=<?= $last ?>, busy=false, oggi=<?= json_encode(date('j/n/Y')) ?>;
 const sc=document.getElementById('scroll'), tx=document.getElementById('txt'),
-      fm=document.getElementById('form'), em=document.getElementById('empty');
-const giu=()=>sc.scrollTop=sc.scrollHeight;
+      fm=document.getElementById('form'), sb=fm.querySelector('.msend'),
+      em=document.getElementById('empty');
+const giu=(liscio)=>sc.scrollTo({top:sc.scrollHeight,behavior:liscio?'smooth':'auto'});
 giu();
 
+function separatore(){
+  const ult=[...sc.querySelectorAll('.mday')].pop();
+  if(ult && ult.dataset.day==='Oggi') return;
+  const d=document.createElement('div');
+  d.className='mday'; d.dataset.day='Oggi';
+  d.innerHTML='<span>Oggi</span>'; sc.appendChild(d);
+}
 function bolla(m){
   if(document.querySelector('[data-id="'+m.id+'"]')) return;
+  if(em) em.remove();
+  separatore();
   const d=document.createElement('div');
   d.className='bub '+(m.mine?'me':'them'); d.dataset.id=m.id;
-  d.innerHTML=(m.mine?'':'<span class="nm">3D WEB LAB</span>')
-    +'<p></p><span class="tm">'+m.at+'</span>';
+  d.innerHTML='<p></p><span class="tm">'+m.at.slice(-5)+'</span>';
   d.querySelector('p').textContent=m.body;
-  sc.appendChild(d); em.hidden=true;
+  sc.appendChild(d);
 }
 function leggi(){
   fetch('msg.php?since='+last).then(r=>r.json()).then(j=>{
-    if(!j.messages) return;
-    const era=sc.scrollHeight-sc.scrollTop-sc.clientHeight<60;
+    if(!j.messages||!j.messages.length) return;
+    const inFondo=sc.scrollHeight-sc.scrollTop-sc.clientHeight<80;
     j.messages.forEach(m=>{ bolla(m); last=Math.max(last,m.id); });
-    if(j.messages.length && era) giu();
+    if(inFondo) giu(true);
   }).catch(()=>{});
 }
-setInterval(leggi, 8000);
+setInterval(leggi, 7000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) leggi(); });
 
-tx.addEventListener('input',()=>{ tx.style.height='auto'; tx.style.height=Math.min(tx.scrollHeight,150)+'px'; });
-tx.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); fm.requestSubmit(); }});
+function altezza(){ tx.style.height='auto'; tx.style.height=Math.min(tx.scrollHeight,132)+'px'; }
+tx.addEventListener('input',()=>{ altezza(); sb.disabled=!tx.value.trim(); });
+tx.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey&&window.matchMedia('(min-width:760px)').matches){
+    e.preventDefault(); fm.requestSubmit();
+  }
+});
 fm.addEventListener('submit',e=>{
   e.preventDefault();
   const b=tx.value.trim(); if(!b||busy) return;
-  busy=true; tx.value=''; tx.style.height='auto';
+  busy=true; sb.disabled=true; tx.value=''; altezza();
   fetch('msg.php',{method:'POST',body:new URLSearchParams({csrf:CSRF,body:b,since:last})})
     .then(r=>r.json())
-    .then(j=>{ (j.messages||[]).forEach(m=>{ bolla(m); last=Math.max(last,m.id); }); giu(); })
-    .catch(()=>{ tx.value=b; })
+    .then(j=>{ (j.messages||[]).forEach(m=>{ bolla(m); last=Math.max(last,m.id); }); giu(true); })
+    .catch(()=>{ tx.value=b; altezza(); sb.disabled=false; })
     .finally(()=>{ busy=false; tx.focus(); });
 });
 </script>
