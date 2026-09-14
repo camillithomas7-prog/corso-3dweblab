@@ -120,6 +120,44 @@ function schema(PDO $p): void {
     CREATE INDEX IF NOT EXISTS ix_hooks ON hooks(created_at DESC);
     ");
     migrate($p);
+    seed_packages($p);
+}
+
+/** I tre pacchetti di partenza, inseriti una volta sola se la tabella è vuota. */
+function seed_packages(PDO $p): void {
+    if ((int)$p->query('SELECT COUNT(*) FROM packages')->fetchColumn() > 0) return;
+    $i = $p->prepare('INSERT INTO packages(title,kicker,intro,bullets,price,price_was,
+                      period,note,badge,featured,pos) VALUES(?,?,?,?,?,?,?,?,?,?,?)');
+    $i->execute([
+        'Creiamo il tuo sito 3D',
+        'Sviluppo su misura',
+        'Il nostro team di sviluppatori costruisce il sito al posto tuo. Tu porti l\'idea, noi la realizziamo.',
+        "Subito dopo il pagamento fissiamo una chiamata per capire il progetto\n"
+        . "Progettazione e sviluppo del sito 3D completo\n"
+        . "Ottimizzazione per desktop e telefono\n"
+        . "Messa online e consegna del progetto finito",
+        299, 890, '', 'Prezzo riservato agli studenti del corso.', '', 0, 1]);
+    $i->execute([
+        'Consulenza tecnica',
+        'Un\'ora con un developer',
+        'Sei bloccato su qualcosa e non ne esci. Un\'ora con un nostro sviluppatore per capire dov\'è il problema e come si risolve.',
+        "Un'ora in videochiamata, uno a uno\n"
+        . "Porti il tuo progetto e il punto in cui ti sei fermato\n"
+        . "Risolviamo insieme, con te che guardi come si fa\n"
+        . "Riepilogo scritto di quanto visto",
+        99, 180, '', 'Prezzo riservato agli studenti del corso.', 'Il più richiesto', 1, 2]);
+    $i->execute([
+        '30 giorni con un coach',
+        'Accompagnamento al lancio',
+        'Un coach esperto di siti e marketing ti segue per un mese intero, dalla costruzione del sito fino alla pubblicità online.',
+        "Un coach dedicato al tuo progetto per 30 giorni\n"
+        . "Costruzione del sito seguita passo passo\n"
+        . "Preparazione dei canali social\n"
+        . "Impostazione e lancio delle pubblicità online\n"
+        . "Confronto continuo su ogni aspetto del progetto",
+        999, 1650, 'al mese',
+        'Durata minima 30 giorni. Dal secondo mese il mantenimento del coach costa 750 € al mese.',
+        '', 0, 3]);
 }
 
 /** Colonne aggiunte dopo il primo rilascio: si applicano una volta sola. */
