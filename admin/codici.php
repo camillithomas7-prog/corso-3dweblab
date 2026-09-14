@@ -58,11 +58,13 @@ $made = $_SESSION['made'] ?? []; unset($_SESSION['made']);
 
 $totLes = (int)db()->query('SELECT COUNT(*) FROM lessons WHERE published=1')->fetchColumn();
 $f = trim((string)($_GET['q'] ?? ''));
-$sql = 'SELECT c.*, (SELECT COUNT(*) FROM progress p WHERE p.code_id=c.id AND p.completed=1) AS done
-        FROM codes c';
+$sql = 'SELECT c.*, (SELECT COUNT(*) FROM progress p WHERE p.code_id=c.id AND p.completed=1) AS done,
+        pr.first_name, pr.last_name, pr.phone_cc, pr.phone, pr.completed_at AS prof_at
+        FROM codes c LEFT JOIN profiles pr ON pr.code_id=c.id';
 $par = [];
-if ($f !== '') { $sql .= ' WHERE c.code LIKE ? OR c.label LIKE ? OR c.order_ref LIKE ? OR c.email LIKE ?';
-                 $par = array_fill(0, 4, "%$f%"); }
+if ($f !== '') { $sql .= ' WHERE c.code LIKE ? OR c.label LIKE ? OR c.order_ref LIKE ? OR c.email LIKE ?
+                            OR pr.first_name LIKE ? OR pr.last_name LIKE ? OR pr.phone LIKE ?';
+                 $par = array_fill(0, 7, "%$f%"); }
 $sql .= ' ORDER BY c.created_at DESC, c.id DESC LIMIT 400';
 $st = db()->prepare($sql); $st->execute($par); $rows = $st->fetchAll();
 $ed = null;
@@ -134,7 +136,7 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
 <div class="card">
   <div class="hd"><h3>Codici emessi</h3>
     <form method="get" style="display:flex;gap:8px">
-      <input class="inp" name="q" value="<?= e($f) ?>" placeholder="Cerca codice, nome, ordine…" style="width:210px;padding:8px 11px;font-size:14px">
+      <input class="inp" name="q" value="<?= e($f) ?>" placeholder="Cerca codice, nome, telefono…" style="width:210px;padding:8px 11px;font-size:14px">
       <button class="btn gh sm">Cerca</button>
     </form>
   </div>
@@ -146,8 +148,18 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
       $scad = $r['expires_at'] && $r['expires_at'] < date('Y-m-d'); ?>
       <tr>
         <td><span class="codecell"><?= e($r['code']) ?></span></td>
-        <td><?= e($r['label'] ?: '—') ?><?php if($r['email']): ?>
-              <div class="muted" style="font-size:12px"><?= e($r['email']) ?></div><?php endif; ?></td>
+        <td>
+          <?php $nome = trim(($r['first_name'] ?? '').' '.($r['last_name'] ?? '')); ?>
+          <b><?= e($nome ?: ($r['label'] ?: '—')) ?></b>
+          <?php if (!$r['prof_at']): ?>
+            <span class="pill warn" style="margin-left:6px">dati mancanti</span>
+          <?php endif; ?>
+          <?php if ($r['phone']): ?>
+            <div class="muted mono" style="font-size:12px"><?= e($r['phone_cc'].' '.$r['phone']) ?></div>
+          <?php endif; ?>
+          <?php if ($r['email']): ?>
+            <div class="muted" style="font-size:12px"><?= e($r['email']) ?></div><?php endif; ?>
+        </td>
         <td class="muted"><?= e($r['order_ref'] ?: '—') ?></td>
         <td><?php if ($rev): ?><span class="pill bad">revocato</span>
             <?php elseif ($scad): ?><span class="pill warn">scaduto</span>
@@ -166,6 +178,7 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
             <input type="hidden" name="action" value="mail"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
             <button class="btn gh sm"><?= $r['email_sent_at'] ? 'Rimanda' : 'Invia email' ?></button></form>
           <?php endif; ?>
+          <a class="btn gh sm" href="cliente.php?id=<?= (int)$r['id'] ?>">Scheda</a>
           <a class="btn gh sm" href="codici.php?edit=<?= (int)$r['id'] ?>">Modifica</a>
           <form method="post"><input type="hidden" name="csrf" value="<?= csrf() ?>">
             <input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>">

@@ -23,10 +23,51 @@ function current_code(): ?array {
     if ($c['expires_at'] && $c['expires_at'] < date('Y-m-d')) { unset($_SESSION['code_id']); return null; }
     return $c;
 }
+/** Il corsista ha già compilato i suoi dati? */
+function profile(int $code_id): ?array {
+    $s = db()->prepare('SELECT * FROM profiles WHERE code_id=?');
+    $s->execute([$code_id]);
+    return $s->fetch() ?: null;
+}
+function profile_done(int $code_id): bool {
+    $p = profile($code_id);
+    return $p && $p['completed_at'];
+}
+
 function require_code(): array {
     $c = current_code();
     if (!$c) { header('Location: index.php'); exit; }
+    // al primo accesso i dati vanno compilati prima di entrare nel corso
+    $here = basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    if (!in_array($here, ['profilo.php', 'logout.php'], true) && !profile_done((int)$c['id'])) {
+        header('Location: profilo.php'); exit;
+    }
     return $c;
+}
+
+/** Prefissi telefonici, Italia per prima. */
+function dial_codes(): array {
+    return [
+        '+39'  => 'Italia', '+41' => 'Svizzera', '+33' => 'Francia', '+49' => 'Germania',
+        '+34'  => 'Spagna', '+44' => 'Regno Unito', '+43' => 'Austria', '+32' => 'Belgio',
+        '+31'  => 'Paesi Bassi', '+351' => 'Portogallo', '+30' => 'Grecia', '+353' => 'Irlanda',
+        '+45'  => 'Danimarca', '+46' => 'Svezia', '+47' => 'Norvegia', '+358' => 'Finlandia',
+        '+48'  => 'Polonia', '+420' => 'Cechia', '+421' => 'Slovacchia', '+36' => 'Ungheria',
+        '+40'  => 'Romania', '+359' => 'Bulgaria', '+385' => 'Croazia', '+386' => 'Slovenia',
+        '+381' => 'Serbia', '+355' => 'Albania', '+356' => 'Malta', '+357' => 'Cipro',
+        '+352' => 'Lussemburgo', '+377' => 'Monaco', '+378' => 'San Marino', '+379' => 'Vaticano',
+        '+376' => 'Andorra', '+372' => 'Estonia', '+371' => 'Lettonia', '+370' => 'Lituania',
+        '+380' => 'Ucraina', '+90' => 'Turchia', '+7' => 'Russia',
+        '+1'   => 'Stati Uniti e Canada', '+52' => 'Messico', '+55' => 'Brasile',
+        '+54'  => 'Argentina', '+56' => 'Cile', '+57' => 'Colombia', '+51' => 'Perù',
+        '+58'  => 'Venezuela', '+593' => 'Ecuador', '+598' => 'Uruguay',
+        '+61'  => 'Australia', '+64' => 'Nuova Zelanda', '+81' => 'Giappone', '+82' => 'Corea del Sud',
+        '+86'  => 'Cina', '+852' => 'Hong Kong', '+65' => 'Singapore', '+91' => 'India',
+        '+62'  => 'Indonesia', '+63' => 'Filippine', '+66' => 'Thailandia', '+84' => 'Vietnam',
+        '+972' => 'Israele', '+971' => 'Emirati Arabi Uniti', '+966' => 'Arabia Saudita',
+        '+974' => 'Qatar', '+20' => 'Egitto', '+212' => 'Marocco', '+216' => 'Tunisia',
+        '+213' => 'Algeria', '+27' => 'Sudafrica', '+234' => 'Nigeria', '+254' => 'Kenya',
+    ];
 }
 function normalize_code(string $raw): string {
     $s = strtoupper(preg_replace('/[^A-Z0-9]/i', '', $raw));

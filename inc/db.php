@@ -88,6 +88,17 @@ function schema(PDO $p): void {
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       PRIMARY KEY (code_id, lesson_id));
 
+    CREATE TABLE IF NOT EXISTS profiles(
+      code_id INTEGER PRIMARY KEY REFERENCES codes(id) ON DELETE CASCADE,
+      first_name TEXT NOT NULL DEFAULT '',
+      last_name  TEXT NOT NULL DEFAULT '',
+      phone_cc   TEXT NOT NULL DEFAULT '+39',
+      phone      TEXT NOT NULL DEFAULT '',
+      email      TEXT NOT NULL DEFAULT '',
+      birthdate  TEXT NOT NULL DEFAULT '',
+      completed_at TEXT,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')));
+
     CREATE TABLE IF NOT EXISTS packages(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
