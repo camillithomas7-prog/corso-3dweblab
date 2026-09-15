@@ -27,11 +27,31 @@ function head(string $title, string $base = ''): void { ?>
 <body>
 <?php }
 
+/** Elenco di PDF scaricabili. Usato sia dentro il corso sia in Materiali. */
+function mat_list(array $items, string $base = ''): void {
+    if (!$items) return; ?>
+  <div class="mats">
+    <?php foreach ($items as $m): ?>
+      <a class="mat" href="<?= $base ?>media.php?t=m&id=<?= (int)$m['id'] ?>" target="_blank" rel="noopener">
+        <span class="pi"><svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="#f0a6d8"
+          stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4.5 1.5h6l4 4v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1Z"/><path d="M10.5 1.5v4h4"/></svg></span>
+        <span class="tx"><b><?= e($m['title']) ?></b>
+          <span><?= $m['ltitle'] ? e($m['ltitle']).' · ' : '' ?>PDF · <?= human_bytes((int)$m['bytes']) ?></span></span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#6c7790" stroke-width="1.6"
+             stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4.5 7.5L8 11l3.5-3.5M3 13.5h10"/></svg>
+      </a>
+    <?php endforeach; ?>
+  </div>
+<?php }
+
 function topbar(?array $code = null, string $base = '', string $active = ''): void {
     $mats = 0; $nuovi = 0;
     try {
-        $mats = (int)db()->query('SELECT COUNT(*) FROM materials')->fetchColumn();
-        if ($code) $nuovi = unread_user((int)$code['id']);
+        if ($code) {
+            $mats  = count(materiali_visibili((int)$code['id']));
+            $nuovi = unread_user((int)$code['id']);
+        }
     } catch (Throwable $e) {}
     ?>
 <div class="top"><div class="wrap in">

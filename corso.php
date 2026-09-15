@@ -18,6 +18,8 @@ $puo = fn($cat) => $permessi === null || in_array((int)$cat, $permessi, true);
 $les = array_values(array_filter($les, fn($l) => $puo($l['category_id'])));
 $byCat = []; foreach ($les as $l) $byCat[(int)$l['category_id']][] = $l;
 $tot  = count($les);
+$matCat = [];   // i PDF vanno mostrati dentro il modulo a cui appartengono
+foreach (materiali_visibili((int)$code['id']) as $m) $matCat[(int)($m['cat'] ?? 0)][] = $m;
 $done = count(array_filter($pr, fn($p) => $p['completed']));
 $pct  = $tot ? round($done / $tot * 100) : 0;
 $next = null;
@@ -111,6 +113,10 @@ head("Il tuo corso"); topbar($code, "", "corso.php"); ?>
           <p class="muted">Questo modulo è già tuo. Appena pubblichiamo le prime lezioni le trovi qui,
             non devi rifare nulla.</p>
         </div></div>
+        <?php if (!empty($matCat[(int)$c['id']])): ?>
+          <h3 style="font-size:15px;margin:18px 0 11px">Materiali del modulo</h3>
+          <?php mat_list($matCat[(int)$c['id']]); ?>
+        <?php endif; ?>
       </section>
       <?php continue; endif; ?>
       <section style="margin-bottom:30px">
@@ -134,8 +140,19 @@ head("Il tuo corso"); topbar($code, "", "corso.php"); ?>
           </a>
           <?php endforeach; ?>
         </div>
+        <?php if (!empty($matCat[(int)$c['id']])): ?>
+          <h3 style="font-size:15px;margin:20px 0 11px">Materiali del modulo</h3>
+          <?php mat_list($matCat[(int)$c['id']]); ?>
+        <?php endif; ?>
       </section>
     <?php endforeach; ?>
+    <?php if (!empty($matCat[0])): ?>
+      <section style="margin-bottom:30px">
+        <div style="margin-bottom:13px"><h2 style="font-size:19px">Materiali generali</h2></div>
+        <?php mat_list($matCat[0]); ?>
+      </section>
+    <?php endif; ?>
+
     <?php $chiusi = array_values(array_filter($cats, fn($c) => !$puo($c['id'])));
       if ($chiusi): ?>
       <section class="upsell">

@@ -153,6 +153,21 @@ function modulo_permesso(int $code_id, ?int $cat): bool {
     return $p === null || ($cat !== null && in_array($cat, $p, true));
 }
 
+/** I materiali che il corsista puo' davvero aprire, gia' in ordine di modulo.
+ *  Ogni riga porta 'cat' (la categoria di appartenenza, null = materiale generale). */
+function materiali_visibili(int $code_id): array {
+    static $cache = [];
+    if (isset($cache[$code_id])) return $cache[$code_id];
+    $rows = db()->query("SELECT m.*, l.title AS ltitle, c.title AS ctitle,
+                                COALESCE(m.category_id, l.category_id) AS cat
+                         FROM materials m
+                         LEFT JOIN lessons l    ON l.id = m.lesson_id
+                         LEFT JOIN categories c ON c.id = COALESCE(m.category_id, l.category_id)
+                         ORDER BY c.pos, c.id, l.pos, l.id, m.pos, m.id")->fetchAll();
+    return $cache[$code_id] = array_values(array_filter($rows, fn($r) =>
+        $r['cat'] === null || modulo_permesso($code_id, (int)$r['cat'])));
+}
+
 /** Assegna i moduli di una riga d'ordine. Restituisce quelli nuovi. */
 function assegna_da_ordine(int $code_id, array $line_items, string $order_ref = ''): array {
     $map = db()->query('SELECT needle, category_id FROM product_map')->fetchAll();
