@@ -140,8 +140,8 @@ $st = db()->query("SELECT k.id, k.title,
     <tbody><?php foreach ($st as $r): ?>
       <tr>
         <td><b><?= e($r['title']) ?></b></td>
-        <td class="mono"><a href="accessi.php?modulo=<?= (int)$r['id'] ?>#chi"
-             style="color:#6ee7ff"><?= (int)$r['n'] ?></a> <span class="muted">/ <?= $tot ?></span></td>
+        <td class="mono"><a href="accessi.php?modulo=<?= (int)$r['id'] ?>#chi" class="cnum"
+             title="Vedi chi ha questo modulo"><?= (int)$r['n'] ?></a> <span class="muted">/ <?= $tot ?></span></td>
         <td class="muted mono"><?= (int)$r['n_ord'] ?></td>
         <td class="muted mono"><?= (int)$r['n_man'] ?></td>
         <td class="muted mono"><?= (int)$r['n_ini'] ?></td>
