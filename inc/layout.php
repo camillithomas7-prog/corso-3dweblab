@@ -70,7 +70,7 @@ function topbar(?array $code = null, string $base = '', string $active = ''): vo
   <span class="sp"></span>
   <?php if ($code): ?>
     <span class="who">accesso <b class="mono"><?= e($code['code']) ?></b></span>
-    <a class="btn gh sm" href="<?= $base ?>logout.php">Esci</a>
+    <a class="btn gh sm" href="<?= $base ?>logout.php" data-esci>Esci</a>
   <?php endif; ?>
 </div></div>
 <?php }
@@ -88,7 +88,7 @@ function mbar(string $active, string $base = ''): void {
   ]; ?>
 <nav class="mbar">
   <?php foreach ($items as [$h,$l,$p]): ?>
-    <a href="<?= $base.$h ?>" class="<?= $active===$h?'on':'' ?>">
+    <a href="<?= $base.$h ?>" class="<?= $active===$h?'on':'' ?>"<?= $h==='logout.php'?' data-esci':'' ?>>
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor"
            stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><?= $p ?></svg><?= $l ?>
       <?php if ($h === 'supporto.php' && $nuovi): ?><span class="mdot"></span><?php endif; ?>
@@ -101,5 +101,34 @@ function foot(): void { ?>
 <script src="assets/js/pdf.js?v=<?= @filemtime(APP_ROOT.'/assets/js/pdf.js') ?>"></script>
 <div class="foot wrap">3D WEB LAB · area riservata ai corsisti<br>
 I contenuti sono personali e non cedibili.</div>
+<?php if (current_code()): ?>
+<div class="ask" id="ask-esci" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="ask-t">
+    <h3 id="ask-t">Vuoi uscire dal corso?</h3>
+    <p>Per rientrare ti servirà di nuovo il tuo codice di accesso.
+      Se volevi solo tornare indietro, annulla.</p>
+    <div class="ab">
+      <button class="btn w" type="button" data-no>Resta nel corso</button>
+      <form method="post" action="logout.php">
+        <input type="hidden" name="csrf" value="<?= csrf() ?>">
+        <button class="btn dg w" type="submit">Sì, esci</button>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var d = document.getElementById('ask-esci');
+  if (!d) return;
+  function apri(e) { e.preventDefault(); d.hidden = false;
+                     var b = d.querySelector('[data-no]'); if (b) b.focus(); }
+  function chiudi() { d.hidden = true; }
+  document.querySelectorAll('a[data-esci]').forEach(function (a) { a.addEventListener('click', apri); });
+  d.querySelector('[data-no]').addEventListener('click', chiudi);
+  d.addEventListener('click', function (e) { if (e.target === d) chiudi(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !d.hidden) chiudi(); });
+})();
+</script>
+<?php endif; ?>
 </body></html>
 <?php }

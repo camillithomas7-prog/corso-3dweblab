@@ -204,6 +204,13 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
 /* ── tabelle admin ────────────────────────────────────── */
+.ask{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:20px;
+  background:rgba(4,5,9,.74);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.ask .box{width:100%;max-width:380px;padding:22px 20px;border-radius:var(--r);
+  background:var(--card);border:1px solid var(--line2);box-shadow:0 30px 70px -35px rgba(0,0,0,.9)}
+.ask h3{font-size:18px;margin-bottom:8px}
+.ask p{font-size:14.5px;color:var(--ink2);line-height:1.6;margin-bottom:20px}
+.ask .ab{display:grid;gap:10px}
 .cnum{display:inline-grid;place-items:center;min-width:34px;min-height:32px;padding:0 8px;margin:-6px 0;
   border-radius:8px;color:var(--acc);font-weight:600;text-decoration:none}
 .cnum:hover{background:#0c1a20}
