@@ -16,7 +16,7 @@ a{color:inherit;text-decoration:none}
 p{margin:0}
 h1,h2,h3,h4{margin:0;font-family:"Space Grotesk",Inter,sans-serif;font-weight:600;line-height:1.2;letter-spacing:-.02em}
 input,select,textarea,button{font:inherit;color:inherit}
-.wrap{width:100%;max-width:var(--wrap);margin:0 auto;padding:0 16px}
+.wrap{width:100%;max-width:var(--wrap);margin:0 auto;padding:0 20px}
 @media(min-width:768px){.wrap{padding:0 24px}}
 .mono{font-variant-numeric:tabular-nums;letter-spacing:.04em}
 .hide{display:none!important}
@@ -117,10 +117,11 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
 .authfoot a{display:inline-block;padding:7px 0;min-height:32px;color:var(--acc);overflow-wrap:anywhere}
 
 /* ── layout corso ─────────────────────────────────────── */
-.shell{display:grid;gap:22px;padding:22px 0 90px}
+.shell{display:grid;gap:22px;padding-top:22px;padding-bottom:90px}
 .shell>main{order:1}          /* da telefono prima il contenuto, poi l'indice */
 .shell>.side{order:2}
-@media(min-width:1000px){.shell{grid-template-columns:310px minmax(0,1fr);gap:28px;padding:26px 0 60px;align-items:start}
+@media(min-width:1000px){.shell{grid-template-columns:310px minmax(0,1fr);gap:28px;
+  padding-top:26px;padding-bottom:60px;align-items:start}
   .shell>.side{order:1}.shell>main{order:2}}
 .side{position:relative}
 @media(min-width:1000px){.side{position:sticky;top:78px;max-height:calc(100dvh - 100px);overflow-y:auto}}
@@ -263,7 +264,7 @@ table.tb .ac{display:flex;gap:6px;justify-content:flex-end}
 .mbar a{flex:1;padding:9px 4px 10px;text-align:center;font-size:10.5px;color:var(--dim);font-weight:500}
 .mbar a.on{color:var(--acc)}
 .mbar a svg{margin:0 auto 3px;display:block}
-.foot{padding:26px 0 34px;font-size:12.5px;color:var(--faint);text-align:center;line-height:1.7}
+.foot{padding-top:26px;padding-bottom:34px;font-size:12.5px;color:var(--faint);text-align:center;line-height:1.7}
 
 /* ── appunti ──────────────────────────────────────────── */
 .notes .sv{font-size:12px;color:var(--dim);transition:color .2s}
