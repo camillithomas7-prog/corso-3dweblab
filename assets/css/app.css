@@ -211,6 +211,14 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
 .ask h3{font-size:18px;margin-bottom:8px}
 .ask p{font-size:14.5px;color:var(--ink2);line-height:1.6;margin-bottom:20px}
 .ask .ab{display:grid;gap:10px}
+.bell{position:relative;display:grid;place-items:center;width:36px;height:36px;flex:0 0 auto;
+  border-radius:10px;border:1px solid var(--line2);background:var(--card);color:var(--dim);
+  text-decoration:none;transition:color .15s,border-color .15s,background .15s}
+.bell:hover{color:var(--ink);border-color:#2b3448;background:var(--card2)}
+.bell.on{color:var(--acc);border-color:rgba(110,231,255,.32)}
+.bell .bn{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 5px;
+  border-radius:99px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;
+  display:grid;place-items:center;border:2px solid var(--bg);line-height:1}
 .cnum{display:inline-grid;place-items:center;min-width:34px;min-height:32px;padding:0 8px;margin:-6px 0;
   border-radius:8px;color:var(--acc);font-weight:600;text-decoration:none}
 .cnum:hover{background:#0c1a20}
