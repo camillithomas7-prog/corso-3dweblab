@@ -19,7 +19,33 @@ function traccia(array $d): void {
                    $d['status'] ?? '', $d['note'] ?? '', $d['code_id'] ?? null]);
 }
 
+/** Moduli nuovi su un codice che esiste gia': li segnala al cliente. */
+function sblocca_e_avvisa(array $row, array $nuovi, array $base, string $via = ''): never {
+    $titoli = [];
+    $t = db()->prepare('SELECT title FROM categories WHERE id=?');
+    foreach ($nuovi as $cid) { $t->execute([$cid]); $titoli[] = (string)$t->fetchColumn(); }
+    try {
+        invia_sblocco($row, $titoli);
+        traccia($base + ['status' => 'sblocco inviato',
+                         'note' => implode(', ', $titoli) . ' → ' . $row['code'] . ($via ? ' · ' . $via : ''),
+                         'code_id' => $row['id']]);
+        exit('ok');
+    } catch (Throwable $e) {
+        db()->prepare('UPDATE codes SET email_error=? WHERE id=?')->execute([$e->getMessage(), $row['id']]);
+        traccia($base + ['status' => 'email fallita',
+                         'note' => $e->getMessage() . ($via ? ' · ' . $via : ''), 'code_id' => $row['id']]);
+        // 200 di proposito: i moduli sono sbloccati, non voglio che Shopify riprovi
+        exit('sbloccato, email non inviata');
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') fine(405, 'solo POST');
+
+// orders/paid arriva al pagamento; orders/updated a ogni modifica successiva.
+// Serve il secondo perche' gli upsell post-acquisto vengono aggiunti all'ordine
+// DOPO il pagamento: al momento di orders/paid quella riga non esiste ancora.
+$topic = (string)($_SERVER['HTTP_X_SHOPIFY_TOPIC'] ?? '');
+$solo_aggiunte = ($topic === 'orders/updated' || $topic === 'orders/edited');
 
 $raw    = file_get_contents('php://input') ?: '';
 $secret = (string)setting('shopify_secret', '');
@@ -60,8 +86,14 @@ if (!$ok) { traccia($base + ['status'=>'ignorato','note'=>'nessun prodotto corri
 $q = db()->prepare('SELECT * FROM codes WHERE shopify_order_id=?');
 $q->execute([$oid]);
 if ($gia = $q->fetch()) {
-    traccia($base + ['status'=>'duplicato','note'=>'ordine già gestito: '.$gia['code'],'code_id'=>$gia['id']]);
-    exit('già gestito');
+    // Qui arrivano sia i tentativi ripetuti di Shopify sia gli upsell aggiunti dopo
+    // il pagamento: se nell'ordine e' comparso un prodotto nuovo, lo sblocco adesso.
+    $nuovi = assegna_da_ordine((int)$gia['id'], $o['line_items'] ?? [], $name);
+    if (!$nuovi) {
+        traccia($base + ['status'=>'duplicato','note'=>'ordine già gestito: '.$gia['code'],'code_id'=>$gia['id']]);
+        exit('già gestito');
+    }
+    sblocca_e_avvisa($gia, $nuovi, $base, $topic ?: 'ordine aggiornato');
 }
 
 $items = $o['line_items'] ?? [];
@@ -84,19 +116,13 @@ if ($ritorno) {
                          'code_id'=>$row['id']]);
         exit('niente di nuovo');
     }
-    $titoli = [];
-    $t = db()->prepare('SELECT title FROM categories WHERE id=?');
-    foreach ($nuovi as $cid) { $t->execute([$cid]); $titoli[] = (string)$t->fetchColumn(); }
-    try {
-        invia_sblocco($row, $titoli);
-        traccia($base + ['status'=>'sblocco inviato',
-                         'note'=>implode(', ', $titoli).' → '.$row['code'], 'code_id'=>$row['id']]);
-        exit('ok');
-    } catch (Throwable $e) {
-        db()->prepare('UPDATE codes SET email_error=? WHERE id=?')->execute([$e->getMessage(), $row['id']]);
-        traccia($base + ['status'=>'email fallita','note'=>$e->getMessage(),'code_id'=>$row['id']]);
-        exit('sbloccato, email non inviata');
-    }
+    sblocca_e_avvisa($row, $nuovi, $base);
+}
+
+// Un aggiornamento non crea codici: il codice nasce solo quando l'ordine e' pagato.
+if ($solo_aggiunte) {
+    traccia($base + ['status'=>'ignorato','note'=>$topic.' su ordine senza codice']);
+    exit('nessun codice da aggiornare');
 }
 
 // Cliente nuovo: genera il codice
