@@ -64,12 +64,20 @@ function topbar(?array $code = null, string $base = '', string $active = ''): vo
     <a href="<?= $base ?>note.php" class="<?= $active==='note.php'?'on':'' ?>">Appunti</a>
     <a href="<?= $base ?>servizi.php" class="<?= $active==='servizi.php'?'on':'' ?>">Servizi</a>
     <a href="<?= $base ?>supporto.php" class="<?= $active==='supporto.php'?'on':'' ?>">
-      Supporto<?php if ($nuovi): ?><span class="cnt hot"><?= $nuovi ?></span><?php endif; ?></a>
+      Supporto<span class="cnt hot" id="navcnt"<?= $nuovi ? '' : ' hidden' ?>><?= $nuovi ?></span></a>
   </nav>
   <?php endif; ?>
   <span class="sp"></span>
   <?php if ($code): ?>
     <span class="who">accesso <b class="mono"><?= e($code['code']) ?></b></span>
+    <a class="bell<?= $nuovi ? ' on' : '' ?>" id="bell" href="<?= $base ?>supporto.php"
+       title="Risposte dal supporto" aria-label="Risposte dal supporto">
+      <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 2.5a5 5 0 0 0-5 5v3l-1.4 2.4A.6.6 0 0 0 4.1 14h11.8a.6.6 0 0 0 .5-.9L15 10.5v-3a5 5 0 0 0-5-5Z"/>
+        <path d="M8.2 16.4a2 2 0 0 0 3.6 0"/></svg>
+      <span class="bn"<?= $nuovi ? '' : ' hidden' ?>><?= $nuovi > 99 ? '99+' : $nuovi ?></span>
+    </a>
     <a class="btn gh sm" href="<?= $base ?>logout.php" data-esci>Esci</a>
   <?php endif; ?>
 </div></div>
@@ -91,7 +99,7 @@ function mbar(string $active, string $base = ''): void {
     <a href="<?= $base.$h ?>" class="<?= $active===$h?'on':'' ?>"<?= $h==='logout.php'?' data-esci':'' ?>>
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor"
            stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><?= $p ?></svg><?= $l ?>
-      <?php if ($h === 'supporto.php' && $nuovi): ?><span class="mdot"></span><?php endif; ?>
+      <?php if ($h === 'supporto.php'): ?><span class="mdot" id="mdot"<?= $nuovi ? '' : ' hidden' ?>></span><?php endif; ?>
     </a>
   <?php endforeach; ?>
 </nav>
@@ -117,6 +125,31 @@ I contenuti sono personali e non cedibili.</div>
   </div>
 </div>
 <script>
+(function () {   // campanella: risposte del supporto, senza dover ricaricare
+  var b = document.getElementById('bell'); if (!b) return;
+  var n = b.querySelector('.bn'),
+      nav = document.getElementById('navcnt'),
+      dot = document.getElementById('mdot');
+  var titolo = document.title.replace(/^\(\d+\)\s*/, '');
+  function dipingi(k) {
+    k = k | 0;
+    if (n) { n.hidden = k === 0; n.textContent = k > 99 ? '99+' : k; }
+    if (nav) { nav.hidden = k === 0; nav.textContent = k; }
+    if (dot) dot.hidden = k === 0;
+    b.classList.toggle('on', k > 0);
+    document.title = k > 0 ? '(' + k + ') ' + titolo : titolo;
+  }
+  dipingi(n && !n.hidden ? parseInt(n.textContent, 10) : 0);
+  function chiedi() {
+    if (document.hidden) return;                 // scheda in secondo piano: non interrogo
+    fetch('avvisi.php', {credentials: 'same-origin'})
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { if (j && typeof j.n === 'number') dipingi(j.n); })
+      .catch(function () {});                    // rete assente: riprovo al giro dopo
+  }
+  setInterval(chiedi, 15000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) chiedi(); });
+})();
 (function () {
   var d = document.getElementById('ask-esci');
   if (!d) return;
