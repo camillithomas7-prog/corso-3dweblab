@@ -8,7 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($a === 'add') {
         $t = trim((string)$_POST['title']);
         $f = trim((string)($_POST['pdf_file'] ?? ''));
-        if ($t === '' || $f === '') { flash('Servono il titolo e il file PDF.', 'err'); back('materiali.php'); }
+        if ($t === '' || $f === '') { flash('Servono il titolo e il file.', 'err'); back('materiali.php'); }
         $path  = STORAGE . '/pdf/' . basename($f);
         $les   = (int)($_POST['lesson_id'] ?? 0) ?: null;
         $cat   = (int)($_POST['category_id'] ?? 0) ?: null;
@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         db()->prepare('INSERT INTO materials(lesson_id,category_id,title,filename,orig_name,bytes,pos)
                        VALUES(?,?,?,?,?,?,?)')
             ->execute([$les, $les ? null : $cat, $t, basename($f),
-                       (string)($_POST['orig_name'] ?? $t.'.pdf'),
+                       (string)($_POST['orig_name'] ?: $t . '.' . pathinfo($f, PATHINFO_EXTENSION)),
                        is_file($path) ? filesize($path) : 0, $pos]);
         flash('Materiale caricato.');
     } elseif ($a === 'edit') {
@@ -47,11 +47,12 @@ $ed = null;
 if ($eid = (int)($_GET['edit'] ?? 0)) { $s=db()->prepare('SELECT * FROM materials WHERE id=?'); $s->execute([$eid]); $ed=$s->fetch(); }
 
 ahead('Materiali', 'materiali.php'); show_flash(); ?>
-<h1 style="font-size:23px;margin-bottom:6px">Materiali PDF</h1>
-<p class="muted" style="margin-bottom:20px;font-size:14.5px">Allega un PDF a una lezione, oppure lascialo libero e finisce fra i materiali generali.</p>
+<h1 style="font-size:23px;margin-bottom:6px">Materiali</h1>
+<p class="muted" style="margin-bottom:20px;font-size:14.5px">Allega un PDF o uno ZIP a una lezione, oppure lascialo libero e finisce fra i materiali generali.
+  Il PDF il corsista lo sfoglia dentro la piattaforma, lo ZIP lo scarica.</p>
 
 <div class="card" style="margin-bottom:22px">
-  <div class="hd"><h3><?= $ed ? 'Modifica materiale' : 'Carica un PDF' ?></h3>
+  <div class="hd"><h3><?= $ed ? 'Modifica materiale' : 'Carica un file' ?></h3>
     <?php if ($ed): ?><a class="btn gh sm" href="materiali.php">Annulla</a><?php endif; ?></div>
   <div class="bd">
     <form method="post">
@@ -65,10 +66,10 @@ ahead('Materiali', 'materiali.php'); show_flash(); ?>
           <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#f0a6d8" stroke-width="1.5"
                stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto">
             <path d="M7 2.5h8l6 6v15a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-20a1 1 0 0 1 1-1Z"/><path d="M15 2.5v6h6"/></svg>
-          <div class="t">Trascina il PDF o clicca</div>
-          <div class="s">Solo file .pdf</div>
+          <div class="t">Trascina il file o clicca</div>
+          <div class="s">PDF o ZIP</div>
         </div>
-        <input type="file" id="fm" accept="application/pdf" hidden>
+        <input type="file" id="fm" accept=".pdf,.zip,application/pdf,application/zip" hidden>
         <div class="upbar" id="dm-bar"><div class="lb"><b></b><span></span></div><div class="bar"><i style="width:0"></i></div></div>
         <input type="hidden" name="pdf_file" id="pdf_file" value="">
         <input type="hidden" name="orig_name" id="orig_name" value="">
@@ -107,18 +108,20 @@ ahead('Materiali', 'materiali.php'); show_flash(); ?>
 
 <div class="card">
   <div class="hd"><h3>Elenco materiali</h3><span class="pill"><?= count($rows) ?></span></div>
-  <?php if (!$rows): ?><div class="bd"><p class="muted">Nessun PDF caricato.</p></div>
+  <?php if (!$rows): ?><div class="bd"><p class="muted">Nessun materiale caricato.</p></div>
   <?php else: ?>
   <div class="tw"><table class="tb">
-    <thead><tr><th>#</th><th>Titolo</th><th>Collegato a</th><th>Peso</th><th></th></tr></thead>
-    <tbody><?php foreach ($rows as $r): ?>
+    <thead><tr><th>#</th><th>Titolo</th><th>Tipo</th><th>Collegato a</th><th>Peso</th><th></th></tr></thead>
+    <tbody><?php foreach ($rows as $r): $zip = mat_tipo($r) === 'zip'; ?>
       <tr>
         <td class="muted mono"><?= (int)$r['pos'] ?></td>
         <td><b><?= e($r['title']) ?></b></td>
+        <td><span class="pill<?= $zip ? '' : ' acc' ?>"><?= $zip ? 'ZIP' : 'PDF' ?></span></td>
         <td class="muted"><?= e($r['ltitle'] ?: ($r['ctitle'] ?: 'Materiali generali')) ?></td>
         <td class="muted mono"><?= human_bytes((int)$r['bytes']) ?></td>
         <td><div class="ac">
-          <a class="btn gh sm" href="../media.php?t=m&id=<?= (int)$r['id'] ?>" target="_blank" rel="noopener">Apri</a>
+          <a class="btn gh sm" href="../media.php?t=m&id=<?= (int)$r['id'] ?>" target="_blank"
+             rel="noopener"><?= $zip ? 'Scarica' : 'Apri' ?></a>
           <a class="btn gh sm" href="materiali.php?edit=<?= (int)$r['id'] ?>">Modifica</a>
           <form method="post" onsubmit="return confirm('Eliminare «<?= e($r['title']) ?>»?')">
             <input type="hidden" name="csrf" value="<?= csrf() ?>">
@@ -138,7 +141,7 @@ const CSRF = <?= json_encode(csrf()) ?>;
 wireDrop('dm','fm','pdf',CSRF,'pdf_file',(j,file)=>{
   document.getElementById('orig_name').value = file.name;
   const t = document.getElementById('mtitle');
-  if (!t.value) t.value = file.name.replace(/\.pdf$/i,'').replace(/[-_]+/g,' ');
+  if (!t.value) t.value = file.name.replace(/\.(pdf|zip)$/i,'').replace(/[-_]+/g,' ');
 });
 </script>
 <?php endif; afoot();

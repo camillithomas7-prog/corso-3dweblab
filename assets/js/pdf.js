@@ -43,6 +43,7 @@
   document.addEventListener('click', e => {
     const a = e.target.closest('a.mat');
     if (!a || !a.href.includes('t=m')) return;
+    if (a.dataset.tipo === 'zip') return;   // lo zip si scarica, non si guarda
     e.preventDefault();
     const t = a.querySelector('b');
     apri(a.href, t ? t.textContent : 'Documento');

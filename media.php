@@ -38,8 +38,11 @@ if ($t === 'v' || $t === 'p') {
     $m = $s->fetch();
     if (!$m) { http_response_code(404); exit; }
     $path = STORAGE . '/pdf/' . basename($m['filename']);
-    $mime = 'application/pdf';
-    $name = preg_replace('/[^\w\-. ]/u', '', $m['orig_name'] ?: ($m['title'] . '.pdf'));
+    $zip  = mat_tipo($m) === 'zip';
+    $mime = $zip ? 'application/zip' : 'application/pdf';
+    // il pdf si guarda nel browser, lo zip non si puo' che scaricare
+    $inline = !$zip;
+    $name = preg_replace('/[^\w\-. ]/u', '', $m['orig_name'] ?: ($m['title'] . ($zip ? '.zip' : '.pdf')));
 } else { http_response_code(400); exit; }
 
 if (!$path || !is_file($path)) { http_response_code(404); exit('File non trovato.'); }
@@ -53,7 +56,8 @@ header('Content-Type: ' . $mime);
 header('Accept-Ranges: bytes');
 header('Cache-Control: private, max-age=0, no-store');
 header('X-Content-Type-Options: nosniff');
-if ($t === 'm') header('Content-Disposition: inline; filename="' . $name . '"');
+if ($t === 'm') header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment')
+                     . '; filename="' . $name . '"');
 
 $start = 0; $end = $size - 1;
 if (!empty($_SERVER['HTTP_RANGE']) && preg_match('/bytes=(\d*)-(\d*)/', $_SERVER['HTTP_RANGE'], $mm)) {

@@ -31,13 +31,20 @@ function head(string $title, string $base = ''): void { ?>
 function mat_list(array $items, string $base = ''): void {
     if (!$items) return; ?>
   <div class="mats">
-    <?php foreach ($items as $m): ?>
-      <a class="mat" href="<?= $base ?>media.php?t=m&id=<?= (int)$m['id'] ?>" target="_blank" rel="noopener">
-        <span class="pi"><svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="#f0a6d8"
-          stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4.5 1.5h6l4 4v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1Z"/><path d="M10.5 1.5v4h4"/></svg></span>
+    <?php foreach ($items as $m): $zip = mat_tipo($m) === 'zip'; ?>
+      <a class="mat" href="<?= $base ?>media.php?t=m&id=<?= (int)$m['id'] ?>"
+         data-tipo="<?= $zip ? 'zip' : 'pdf' ?>" target="_blank" rel="noopener">
+        <span class="pi<?= $zip ? ' zip' : '' ?>"><?php if ($zip): ?>
+          <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="#8ab6ff"
+            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2.2 5.3 8.5 2l6.3 3.3v6.4L8.5 15l-6.3-3.3Z"/><path d="M2.4 5.4 8.5 8.6l6.1-3.2M8.5 8.6V15"/></svg>
+        <?php else: ?>
+          <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="#f0a6d8"
+            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.5 1.5h6l4 4v10a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1Z"/><path d="M10.5 1.5v4h4"/></svg>
+        <?php endif; ?></span>
         <span class="tx"><b><?= e($m['title']) ?></b>
-          <span><?= $m['ltitle'] ? e($m['ltitle']).' · ' : '' ?>PDF · <?= human_bytes((int)$m['bytes']) ?></span></span>
+          <span><?= $m['ltitle'] ? e($m['ltitle']).' · ' : '' ?><?= $zip ? 'ZIP' : 'PDF' ?> · <?= human_bytes((int)$m['bytes']) ?></span></span>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#6c7790" stroke-width="1.6"
              stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v9M4.5 7.5L8 11l3.5-3.5M3 13.5h10"/></svg>
       </a>

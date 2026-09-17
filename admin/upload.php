@@ -48,7 +48,7 @@ $idx   = (int)($_POST['idx'] ?? 0);
 $total = (int)($_POST['total'] ?? 0);
 $name  = (string)($_POST['name'] ?? 'file');
 
-$allow = ['video'=>['mp4','mov','m4v','webm'], 'pdf'=>['pdf'], 'poster'=>['jpg','jpeg','png','webp']];
+$allow = ['video'=>['mp4','mov','m4v','webm'], 'pdf'=>['pdf','zip'], 'poster'=>['jpg','jpeg','png','webp']];
 if (!isset($allow[$kind]) || !$uid || $total < 1) { reply(['error'=>'richiesta non valida'], 400); }
 $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
 if (!in_array($ext, $allow[$kind], true)) {
