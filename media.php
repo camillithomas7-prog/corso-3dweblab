@@ -27,6 +27,12 @@ if ($t === 'v' || $t === 'p') {
         $path = STORAGE . '/video/' . basename($l['poster']);
         $mime = str_ends_with(strtolower($l['poster']), '.png') ? 'image/png' : 'image/jpeg';
     }
+} elseif ($t === 'c') {
+    $s = db()->prepare('SELECT * FROM corsi WHERE id=?'); $s->execute([$id]);
+    $c = $s->fetch();
+    if (!$c || !$c['image'] || str_starts_with((string)$c['image'], 'assets/')) { http_response_code(404); exit; }
+    $path = STORAGE . '/img/' . basename((string)$c['image']);
+    $mime = str_ends_with(strtolower((string)$c['image']), '.png') ? 'image/png' : 'image/jpeg';
 } elseif ($t === 'm') {
     $s = db()->prepare('SELECT * FROM materials WHERE id=?'); $s->execute([$id]);
     $m = $s->fetch();

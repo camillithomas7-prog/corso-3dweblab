@@ -62,6 +62,7 @@ function topbar(?array $code = null, string $base = '', string $active = ''): vo
     <a href="<?= $base ?>materiali.php" class="<?= $active==='materiali.php'?'on':'' ?>">
       Materiali<?php if ($mats): ?><span class="cnt"><?= $mats ?></span><?php endif; ?></a>
     <a href="<?= $base ?>note.php" class="<?= $active==='note.php'?'on':'' ?>">Appunti</a>
+    <a href="<?= $base ?>corsi.php" class="<?= $active==='corsi.php'?'on':'' ?>">Nuovi corsi</a>
     <a href="<?= $base ?>servizi.php" class="<?= $active==='servizi.php'?'on':'' ?>">Servizi</a>
     <a href="<?= $base ?>supporto.php" class="<?= $active==='supporto.php'?'on':'' ?>">
       Supporto<span class="cnt hot" id="navcnt"<?= $nuovi ? '' : ' hidden' ?>><?= $nuovi ?></span></a>
@@ -90,6 +91,7 @@ function mbar(string $active, string $base = ''): void {
     ['corso.php',     'Corso',     '<path d="M3 5.6h14M3 10h14M3 14.4h9"/>'],
     ['materiali.php', 'Materiali', '<path d="M4 3h7l5 5v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M11 3v5h5"/>'],
     ['note.php',      'Appunti',   '<path d="M5 2.5h10v15H5z"/><path d="M8 6.5h4M8 10h4M8 13.5h2"/>'],
+    ['corsi.php',     'Store',     '<path d="M4 4.5h5a2 2 0 0 1 2 2v9a1.6 1.6 0 0 0-1.6-1.6H4Z"/><path d="M16 4.5h-5a2 2 0 0 0-2 2v9a1.6 1.6 0 0 1 1.6-1.6H16Z"/>'],
     ['servizi.php',   'Servizi',   '<path d="M3 6.5h14v10H3z"/><path d="M7 6.5V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2.5"/>'],
     ['supporto.php',  'Supporto',  '<path d="M17 12a2 2 0 0 1-2 2H6l-3 3V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/>'],
     ['logout.php',    'Esci',      '<path d="M8 17H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4"/><path d="M13 14l4-4-4-4M17 10H8"/>'],

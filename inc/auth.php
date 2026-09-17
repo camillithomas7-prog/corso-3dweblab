@@ -219,6 +219,15 @@ function msg_row(array $m): array {
 }
 
 function e(?string $s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+/** Copertina di un corso in vendita: quelle di serie stanno nel repo,
+ *  quelle caricate dal pannello passano da media.php. */
+function corso_img(array $c, string $base = ''): string {
+    $im = trim((string)($c['image'] ?? ''));
+    if ($im === '') return '';
+    if (str_starts_with($im, 'assets/')) return $base . $im;
+    return $base . 'media.php?t=c&id=' . (int)$c['id'];
+}
+
 function hms(int $s): string {
     if ($s <= 0) return '—';
     $h = intdiv($s,3600); $m = intdiv($s%3600,60); $x = $s%60;

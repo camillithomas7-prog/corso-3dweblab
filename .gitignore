@@ -8,6 +8,7 @@ data/*.db
 storage/video/*
 storage/pdf/*
 storage/tmp/*
+storage/img/*
 !storage/*/.gitkeep
 
 # ── solo anteprima locale, non va online ──

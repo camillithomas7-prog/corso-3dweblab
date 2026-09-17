@@ -173,6 +173,21 @@ function schema(PDO $p): void {
       code_id INTEGER,
       created_at TEXT NOT NULL DEFAULT (datetime('now')));
 
+    CREATE TABLE IF NOT EXISTS corsi(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      subtitle TEXT NOT NULL DEFAULT '',
+      descr TEXT NOT NULL DEFAULT '',
+      image TEXT NOT NULL DEFAULT '',
+      price REAL NOT NULL DEFAULT 0,
+      price_offer REAL,
+      coupon TEXT NOT NULL DEFAULT '',
+      url TEXT NOT NULL DEFAULT '',
+      badge TEXT NOT NULL DEFAULT '',
+      pos INTEGER NOT NULL DEFAULT 0,
+      published INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')));
+
     CREATE INDEX IF NOT EXISTS ix_les_cat ON lessons(category_id, pos);
     CREATE INDEX IF NOT EXISTS ix_mat_les ON materials(lesson_id);
     CREATE INDEX IF NOT EXISTS ix_hooks ON hooks(created_at DESC);
@@ -181,6 +196,35 @@ function schema(PDO $p): void {
     seed_packages($p);
     seed_questions($p);
     backfill_entitlements($p);
+    seed_corsi($p);
+}
+
+/** I corsi in vendita di partenza, inseriti una volta sola se la tabella è vuota.
+ *  Da qui in poi si gestiscono dal pannello. */
+function seed_corsi(PDO $p): void {
+    if ((int)$p->query('SELECT COUNT(*) FROM corsi')->fetchColumn() > 0) return;
+    $i = $p->prepare('INSERT INTO corsi(title,subtitle,descr,image,price,price_offer,coupon,url,badge,pos)
+                      VALUES(?,?,?,?,?,?,?,?,?,?)');
+    $i->execute([
+        'Creative AI pubblicitarie',
+        'Il servizio da rivendere ai tuoi clienti',
+        'Come produrre creative pubblicitarie con l\'intelligenza artificiale e rivenderle '
+        . 'come servizio ricorrente. Idea, creazione, pubblicazione.',
+        'assets/img/corsi/creative-ai-pubblicitarie.jpg',
+        49.99, 9.99, '3DWEBLAB9',
+        'https://3dweblab.it/products/creative-ai-pubblicitarie-il-servizio-da-rivendere-ai-tuoi-clienti',
+        '', 1,
+    ]);
+    $i->execute([
+        'Agente AI telefonico',
+        'Il servizio ricorrente da rivendere ai tuoi clienti',
+        'Come costruire un assistente telefonico che risponde al posto del cliente, '
+        . 'e venderlo come servizio a canone mensile.',
+        'assets/img/corsi/agente-ai-telefonico.jpg',
+        49.99, 9.99, '3DWEBLAB9',
+        'https://3dweblab.it/products/agente-ai-telefonico-il-servizio-ricorrente-da-300-500-mese-per-ogni-cliente',
+        '', 2,
+    ]);
 }
 
 /** I tre pacchetti di partenza, inseriti una volta sola se la tabella è vuota. */
