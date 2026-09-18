@@ -55,6 +55,7 @@ ahead('Scheda cliente', 'codici.php'); show_flash(); ?>
     <p class="muted" style="margin-top:6px"><span class="codecell"><?= e($c['code']) ?></span></p>
   </div>
   <a class="btn gh sm" href="codici.php">Torna ai codici</a>
+  <a class="btn gh sm" href="chat.php?id=<?= $id ?>">Scrivigli</a>
 </div>
 
 <?php if (!$p || !$p['completed_at']): ?>

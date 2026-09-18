@@ -504,6 +504,13 @@ body.noscroll{overflow:hidden}
 @media(min-width:940px){.cgrid{grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}}
 .clist{display:grid;gap:8px;max-height:none;grid-template-columns:minmax(0,1fr)}
 @media(min-width:940px){.clist{max-height:calc(100dvh - 210px);overflow-y:auto}}
+.cnew{display:flex;flex-direction:column;gap:7px;padding:13px 14px;margin-bottom:10px;
+  border:1px solid var(--line2);border-radius:11px;background:var(--card2)}
+.cnew label{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.cnew-r{display:flex;gap:8px;min-width:0}
+.cnew-r .inp{flex:1;min-width:0;padding:8px 10px;font-size:14px}
+.cnew-r .btn{flex:0 0 auto}
+.cvuota{margin:auto;padding:26px 20px;text-align:center;font-size:14px;color:var(--dim);line-height:1.7}
 .citem{display:block;position:relative;min-width:0;padding:14px 15px;border-radius:11px;background:var(--card);
   border:1px solid var(--line2);transition:border-color .14s,background .14s}
 .citem:hover{border-color:#2b3448;background:var(--card2)}

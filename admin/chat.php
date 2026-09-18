@@ -16,6 +16,12 @@ $conv = db()->query("
   WHERE EXISTS (SELECT 1 FROM messages m WHERE m.code_id=c.id)
   ORDER BY nuovi DESC, quando DESC")->fetchAll();
 
+// tutti i corsisti attivi: serve per iniziare una conversazione con chi non ha mai scritto
+$tutti = db()->query("SELECT c.id, c.code, p.first_name, p.last_name
+                      FROM codes c LEFT JOIN profiles p ON p.code_id=c.id
+                      WHERE c.status='active'
+                      ORDER BY COALESCE(NULLIF(TRIM(p.first_name||' '||p.last_name),''), c.code)")->fetchAll();
+
 $att = null; $msgs = []; $last = 0;
 if ($cid) {
     $s = db()->prepare('SELECT c.*, p.first_name, p.last_name, p.email, p.phone_cc, p.phone
@@ -36,8 +42,24 @@ ahead('Supporto', 'chat.php'); show_flash(); ?>
 
 <div class="cgrid">
   <aside class="clist">
+    <?php if ($tutti): ?>
+      <form class="cnew" method="get">
+        <label for="dest">Scrivi a un corsista</label>
+        <div class="cnew-r">
+          <select class="inp" name="id" id="dest">
+            <?php foreach ($tutti as $t): ?>
+              <option value="<?= (int)$t['id'] ?>" <?= (int)$t['id']===$cid ? 'selected' : '' ?>>
+                <?= e($nome($t)) ?><?= trim(($t['first_name'] ?? '').($t['last_name'] ?? '')) !== '' ? ' · '.e($t['code']) : '' ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+          <button class="btn sm">Apri</button>
+        </div>
+      </form>
+    <?php endif; ?>
     <?php if (!$conv): ?>
-      <div class="card"><div class="bd"><p class="muted">Nessuna conversazione. Compariranno qui appena un corsista scrive.</p></div></div>
+      <div class="card"><div class="bd"><p class="muted">Nessuna conversazione ancora aperta.
+        Scegli un corsista qui sopra e scrivigli per primo.</p></div></div>
     <?php endif; ?>
     <?php foreach ($conv as $c): ?>
       <a class="citem <?= (int)$c['id']===$cid ? 'on' : '' ?>" href="chat.php?id=<?= (int)$c['id'] ?>">
@@ -69,6 +91,10 @@ ahead('Supporto', 'chat.php'); show_flash(); ?>
 
     <div class="chat">
       <div class="cscroll" id="scroll">
+        <?php if (!$msgs): ?>
+          <p class="cvuota">Nessun messaggio con <?= e($nome($att)) ?>.<br>
+            Quello che scrivi qui gli compare nella sua area Supporto, con la campanella.</p>
+        <?php endif; ?>
         <?php foreach ($msgs as $m): ?>
           <div class="bub <?= $m['sender']==='admin' ? 'me' : 'them' ?>" data-id="<?= (int)$m['id'] ?>">
             <?php if ($m['sender']!=='admin'): ?><span class="nm"><?= e($nome($att)) ?></span><?php endif; ?>
@@ -78,7 +104,7 @@ ahead('Supporto', 'chat.php'); show_flash(); ?>
         <?php endforeach; ?>
       </div>
       <form class="cbar" id="form">
-        <textarea id="txt" rows="1" placeholder="Rispondi…" maxlength="4000"></textarea>
+        <textarea id="txt" rows="1" placeholder="<?= $msgs ? 'Rispondi…' : 'Scrivi il primo messaggio…' ?>" maxlength="4000"></textarea>
         <button class="csend" type="submit" aria-label="Invia">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor"
                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
