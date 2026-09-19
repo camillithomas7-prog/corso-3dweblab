@@ -234,6 +234,37 @@ function schema(PDO $p): void {
     backfill_entitlements($p);
     seed_corsi($p);
     seed_vquiz($p);
+    attiva_vquiz($p);
+}
+
+/** Aggancia il sondaggio al settimo video e lo accende, da solo.
+ *  Cerca prima una lezione che abbia un 7 nel titolo (Modulo 7, Video 7, Lezione 7),
+ *  altrimenti prende la settima in ordine di corso. Smette di provarci appena
+ *  riesce, o appena tocchi la configurazione dal pannello. */
+function attiva_vquiz(PDO $p): void {
+    $g = $p->prepare('SELECT v FROM settings WHERE k=?'); $g->execute(['vquiz_agganciato']);
+    if ($g->fetchColumn()) return;
+
+    $z = $p->query('SELECT id, lesson_id, published FROM vquiz ORDER BY id LIMIT 1')->fetch();
+    if (!$z || $z['lesson_id'] || $z['published']) return;   // gia' configurato: non mi intrometto
+
+    $usabili = $p->query("SELECT l.id, l.title FROM lessons l
+                          LEFT JOIN categories c ON c.id=l.category_id
+                          WHERE l.video_type IN ('file','url') AND l.video_src<>''
+                          ORDER BY c.pos, c.id, l.pos, l.id")->fetchAll();
+    if (!$usabili) return;                                   // nessun video ancora: riprovo al prossimo giro
+
+    $scelta = null;
+    foreach ($usabili as $l) {
+        if (preg_match('/(?<!\d)7(?!\d)/', (string)$l['title'])) { $scelta = (int)$l['id']; break; }
+    }
+    if (!$scelta && count($usabili) >= 7) $scelta = (int)$usabili[6]['id'];
+    if (!$scelta) return;                                    // meno di sette video: aspetto
+
+    $p->prepare('UPDATE vquiz SET lesson_id=?, at_sec=218, published=1 WHERE id=?')
+      ->execute([$scelta, (int)$z['id']]);
+    $p->prepare('INSERT OR IGNORE INTO settings(k,v) VALUES(?,?)')
+      ->execute(['vquiz_agganciato', 'lezione ' . $scelta . ' · ' . date('c')]);
 }
 
 /** Il sondaggio sull'e-commerce, pronto ma spento: lezione e minuto

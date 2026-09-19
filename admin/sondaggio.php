@@ -29,6 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($pub && !$les) { flash('Scegli su quale lezione deve comparire.', 'err'); back('sondaggio.php'); }
         db()->prepare('UPDATE vquiz SET lesson_id=?, at_sec=?, intro=?, chiusura=?, published=? WHERE id=?')
            ->execute([$les, $sec, trim((string)$_POST['intro']), trim((string)$_POST['chiusura']), $pub, $qid]);
+        // da qui in poi comanda la tua scelta, non l'aggancio automatico
+        db()->prepare('INSERT OR IGNORE INTO settings(k,v) VALUES(?,?)')
+           ->execute(['vquiz_agganciato', 'scelto a mano · ' . date('c')]);
         flash($pub ? 'Sondaggio attivo su questa lezione.' : 'Sondaggio salvato e spento.');
 
     } elseif ($a === 'dsave') {
