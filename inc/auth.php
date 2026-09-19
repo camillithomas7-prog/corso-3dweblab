@@ -219,6 +219,13 @@ function msg_row(array $m): array {
 }
 
 function e(?string $s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+/** Copertina di una lezione: la sua, se ce l'ha, altrimenti quella standard. */
+function poster_url(array $l, string $base = ''): string {
+    return !empty($l['poster'])
+        ? $base . 'media.php?t=p&id=' . (int)$l['id']
+        : $base . 'assets/img/poster-default.jpg';
+}
+
 /** Che tipo di materiale e': 'pdf' si apre in pagina, 'zip' si scarica. */
 function mat_tipo(array $m): string {
     $e = strtolower(pathinfo((string)($m['orig_name'] ?: $m['filename']), PATHINFO_EXTENSION));

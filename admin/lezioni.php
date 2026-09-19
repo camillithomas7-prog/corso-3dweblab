@@ -20,7 +20,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($id) {
             $old = db()->prepare('SELECT * FROM lessons WHERE id=?'); $old->execute([$id]); $o = $old->fetch();
             if ($vt === 'file' && $src === '')  $src = $o['video_type']==='file' ? $o['video_src'] : '';
-            if ($pst === '') $pst = $o['poster'];
+            if (!empty($_POST['poster_reset'])) {
+                $pst = '';                                   // torna alla copertina standard
+            } elseif ($pst === '') {
+                $pst = $o['poster'];                         // nessun nuovo file: tiene la sua
+            }
+            // la vecchia copertina sostituita o rimossa non serve piu'
+            if ($o['poster'] && $pst !== $o['poster']) @unlink(STORAGE.'/video/'.basename($o['poster']));
             db()->prepare('UPDATE lessons SET category_id=?,title=?,descr=?,video_type=?,video_src=?,
                            poster=?,duration_sec=?,pos=?,published=? WHERE id=?')
                 ->execute([$cat,$title,trim((string)$_POST['descr']),$vt,$src,$pst,$dur,$pos,$pub,$id]);
@@ -132,15 +138,28 @@ ahead('Lezioni', 'lezioni.php'); show_flash(); ?>
             <?= (!$ed || $ed['published'])?'checked':'' ?>> Visibile ai corsisti</label></div>
       </div>
 
+      <?php $sua = $ed && !empty($ed['poster']); ?>
       <div class="fld"><label>Copertina (facoltativa)</label>
         <div class="hint" style="margin:0 0 9px;display:flex;align-items:center;gap:11px">
-          <img src="../assets/img/poster-default.jpg" alt="" style="width:104px;border-radius:6px;border:1px solid var(--line)">
-          <span>Predefinita per tutti i video. Caricane una solo se vuoi sostituirla su questa lezione.</span>
+          <img src="<?= $sua ? '../media.php?t=p&id='.(int)$ed['id'].'&v='.urlencode((string)$ed['poster'])
+                             : '../assets/img/poster-default.jpg' ?>" alt=""
+               style="width:104px;border-radius:6px;border:1px solid var(--line)">
+          <span><?php if ($sua): ?>
+              <b style="color:var(--acc)">Copertina personalizzata</b>, attiva su questa lezione.
+              Caricane un'altra per sostituirla.
+            <?php else: ?>
+              <b>Copertina standard</b>, usata su tutti i video.
+              Caricane una qui sotto solo se vuoi cambiarla su questa lezione.
+            <?php endif; ?></span>
         </div>
         <div class="drop" id="dp" style="padding:16px">
           <div class="t" style="margin:0">Trascina un'immagine o clicca</div>
           <div class="s">JPG o PNG, 16:9 — se non la metti si usa la copertina 3D WEB LAB</div>
         </div>
+        <?php if ($sua): ?>
+          <label class="chk" style="margin-top:10px"><input type="checkbox" name="poster_reset">
+            Torna alla copertina standard</label>
+        <?php endif; ?>
         <input type="file" id="fp" accept="image/jpeg,image/png,image/webp" hidden>
         <div class="upbar" id="dp-bar"><div class="lb"><b></b><span></span></div><div class="bar"><i style="width:0"></i></div></div>
         <input type="hidden" name="poster_file" id="poster_file" value="">
@@ -156,10 +175,14 @@ ahead('Lezioni', 'lezioni.php'); show_flash(); ?>
   <?php if (!$rows): ?><div class="bd"><p class="muted">Nessuna lezione ancora.</p></div>
   <?php else: ?>
   <div class="tw"><table class="tb">
-    <thead><tr><th>#</th><th>Lezione</th><th>Categoria</th><th>Video</th><th>Durata</th><th>PDF</th><th></th></tr></thead>
+    <thead><tr><th>#</th><th></th><th>Lezione</th><th>Categoria</th><th>Video</th><th>Durata</th><th>PDF</th><th></th></tr></thead>
     <tbody><?php foreach ($rows as $r): ?>
       <tr>
         <td class="muted mono"><?= (int)$r['pos'] ?></td>
+        <td style="width:70px"><img src="<?= poster_url($r, '../') ?>" alt="" loading="lazy"
+             title="<?= empty($r['poster']) ? 'Copertina standard' : 'Copertina personalizzata' ?>"
+             style="width:56px;aspect-ratio:16/9;object-fit:cover;border-radius:5px;display:block;
+                    border:1px solid <?= empty($r['poster']) ? 'var(--line)' : 'var(--acc)' ?>"></td>
         <td><b><?= e($r['title']) ?></b><?php if(!$r['published']): ?>
               <span class="pill warn" style="margin-left:7px">nascosta</span><?php endif; ?></td>
         <td class="muted"><?= e($r['cat'] ?? '—') ?></td>

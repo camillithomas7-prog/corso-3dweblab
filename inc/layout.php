@@ -2,13 +2,6 @@
 declare(strict_types=1);
 require_once __DIR__ . '/auth.php';
 
-/** Copertina di una lezione: la sua, oppure quella predefinita del brand. */
-function poster_url(array $l, string $base = ''): string {
-    return !empty($l['poster'])
-        ? $base . 'media.php?t=p&id=' . (int)$l['id']
-        : $base . 'assets/img/poster-default.jpg';
-}
-
 function head(string $title, string $base = ''): void { ?>
 <!doctype html>
 <html lang="it">
