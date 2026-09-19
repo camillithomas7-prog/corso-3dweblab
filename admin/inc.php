@@ -35,7 +35,7 @@ function ahead(string $title, string $active): void {
   foreach ([
     'dashboard.php'=>'Panoramica','categorie.php'=>'Categorie','lezioni.php'=>'Lezioni',
     'materiali.php'=>'Materiali','corsi.php'=>'Nuovi corsi','codici.php'=>'Codici di accesso','accessi.php'=>'Accessi','domande.php'=>'Domande',
-    'risposte.php'=>'Risposte','chat.php'=>'Supporto','pacchetti.php'=>'Pacchetti',
+    'risposte.php'=>'Risposte','sondaggio.php'=>'Sondaggio','chat.php'=>'Supporto','pacchetti.php'=>'Pacchetti',
     'impostazioni.php'=>'Impostazioni'] as $h=>$l): ?>
     <a href="<?= $h ?>" class="<?= $active===$h?'on':'' ?>"><?= $l ?><?php
       if ($h === 'chat.php'): ?><span class="nb" id="navnb"<?= $nl ? '' : ' hidden' ?>><?= $nl ?></span><?php endif; ?></a>

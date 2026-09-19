@@ -188,6 +188,42 @@ function schema(PDO $p): void {
       published INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL DEFAULT (datetime('now')));
 
+    /* sondaggio che compare dentro un video a un minuto preciso */
+    CREATE TABLE IF NOT EXISTS vquiz(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
+      at_sec INTEGER NOT NULL DEFAULT 0,
+      intro TEXT NOT NULL DEFAULT '',
+      chiusura TEXT NOT NULL DEFAULT '',
+      published INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')));
+
+    CREATE TABLE IF NOT EXISTS vq_questions(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      quiz_id INTEGER NOT NULL REFERENCES vquiz(id) ON DELETE CASCADE,
+      type TEXT NOT NULL DEFAULT 'single',     -- single | text
+      label TEXT NOT NULL,
+      help TEXT NOT NULL DEFAULT '',
+      options TEXT NOT NULL DEFAULT '',        -- una per riga
+      altro INTEGER NOT NULL DEFAULT 0,        -- aggiunge la voce Altro con campo libero
+      show_if_q INTEGER,                       -- compare solo se...
+      show_if_v TEXT NOT NULL DEFAULT '',      -- ...quella domanda vale questo
+      required INTEGER NOT NULL DEFAULT 1,
+      pos INTEGER NOT NULL DEFAULT 0);
+
+    CREATE TABLE IF NOT EXISTS vq_answers(
+      code_id INTEGER NOT NULL REFERENCES codes(id) ON DELETE CASCADE,
+      question_id INTEGER NOT NULL REFERENCES vq_questions(id) ON DELETE CASCADE,
+      value TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY(code_id, question_id));
+
+    CREATE TABLE IF NOT EXISTS vq_done(
+      code_id INTEGER NOT NULL REFERENCES codes(id) ON DELETE CASCADE,
+      quiz_id INTEGER NOT NULL REFERENCES vquiz(id) ON DELETE CASCADE,
+      done_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY(code_id, quiz_id));
+
     CREATE INDEX IF NOT EXISTS ix_les_cat ON lessons(category_id, pos);
     CREATE INDEX IF NOT EXISTS ix_mat_les ON materials(lesson_id);
     CREATE INDEX IF NOT EXISTS ix_hooks ON hooks(created_at DESC);
@@ -197,6 +233,39 @@ function schema(PDO $p): void {
     seed_questions($p);
     backfill_entitlements($p);
     seed_corsi($p);
+    seed_vquiz($p);
+}
+
+/** Il sondaggio sull'e-commerce, pronto ma spento: lezione e minuto
+ *  si scelgono dal pannello. */
+function seed_vquiz(PDO $p): void {
+    if ((int)$p->query('SELECT COUNT(*) FROM vquiz')->fetchColumn() > 0) return;
+    $p->prepare('INSERT INTO vquiz(lesson_id,at_sec,intro,chiusura,published) VALUES(?,?,?,?,0)')
+      ->execute([null, 218, 'Un attimo solo: due domande e riprendi.',
+                 'Grazie, lo leggiamo davvero. Ora puoi riprendere il video.']);
+    $qz = (int)$p->lastInsertId();
+    $i = $p->prepare('INSERT INTO vq_questions(quiz_id,type,label,help,options,altro,show_if_q,show_if_v,required,pos)
+                      VALUES(?,?,?,?,?,?,?,?,1,?)');
+    $i->execute([$qz, 'single', "Ti interesserebbe un corso dedicato all'e-commerce?", '', "Sì\nNo", 0, null, '', 1]);
+    $q1 = (int)$p->lastInsertId();
+    $i->execute([$qz, 'single', 'Vuoi essere avvisato quando esce?', '', "Sì\nNo", 0, null, '', 2]);
+    $q2 = (int)$p->lastInsertId();
+    $i->execute([$qz, 'single', 'Qual è il motivo principale del tuo no?',
+        'Ci aiuti a capire? Sii sincero, ci serve.',
+        "L'e-commerce non mi interessa\n"
+      . "Non mi avete ancora convinto che il vostro corso e-commerce valga la pena\n"
+      . "Ho già comprato corsi e-commerce e mi hanno deluso\n"
+      . "Ho già competenze o un e-commerce avviato\n"
+      . "Non credo che l'e-commerce faccia per me (troppo difficile, servono soldi, ecc.)\n"
+      . "Il prezzo potrebbe essere un problema\n"
+      . "Adesso non ho tempo", 1, $q2, 'No', 3]);
+    $i->execute([$qz, 'single', 'Cosa ti convincerebbe a dargli una possibilità?', '',
+        "Vedere risultati reali di negozi costruiti con il metodo\n"
+      . "Una lezione gratuita di prova\n"
+      . "Una garanzia di rimborso\n"
+      . "Il programma dettagliato dei moduli\n"
+      . "Niente, non fa per me", 1, $q2, 'No', 4]);
+    $i->execute([$qz, 'text', 'Se dovessimo farlo su misura per te, cosa vorresti trovarci dentro?', '', '', 0, $q2, 'No', 5]);
 }
 
 /** I corsi in vendita di partenza, inseriti una volta sola se la tabella è vuota.

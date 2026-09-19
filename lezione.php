@@ -13,6 +13,27 @@ if (!modulo_permesso((int)$code['id'], $l['category_id'] === null ? null : (int)
     header('Location: corso.php?chiuso=1'); exit;
 }
 
+// sondaggio dentro il video: solo se attivo su questa lezione e non gia' compilato
+$vq = null;
+$q = db()->prepare("SELECT v.* FROM vquiz v
+                    WHERE v.lesson_id=? AND v.published=1
+                      AND NOT EXISTS (SELECT 1 FROM vq_done d WHERE d.quiz_id=v.id AND d.code_id=?)
+                    LIMIT 1");
+$q->execute([$id, (int)$code['id']]);
+if ($vq = $q->fetch() ?: null) {
+    $q = db()->prepare('SELECT * FROM vq_questions WHERE quiz_id=? ORDER BY pos, id');
+    $q->execute([(int)$vq['id']]);
+    $vq['domande'] = array_map(function (array $d) {
+        $o = array_values(array_filter(array_map('trim', preg_split('/\r?\n/', (string)$d['options']))));
+        return ['id' => (int)$d['id'], 'type' => $d['type'], 'label' => $d['label'],
+                'help' => $d['help'], 'options' => $o, 'altro' => (int)$d['altro'],
+                'se_q' => (int)($d['show_if_q'] ?? 0), 'se_v' => (string)$d['show_if_v'],
+                'obbl' => (int)$d['required']];
+    }, $q->fetchAll());
+    // su un video incorporato non posso mettere in pausa: il sondaggio non parte
+    if ($l['video_type'] === 'embed' || !$l['video_src']) $vq = null;
+}
+
 $permessi = moduli_permessi((int)$code['id']);
 $okc = fn($cat) => $permessi === null || in_array((int)$cat, $permessi, true);
 $ord = array_values(array_filter(
@@ -171,6 +192,51 @@ head($l['title']); topbar($code, '', 'corso.php'); ?>
     </div>
   </main>
 </div>
+
+<?php if ($vq): ?>
+<div class="vqw" id="vqw" hidden>
+  <div class="vqbox" role="dialog" aria-modal="true" aria-labelledby="vqt">
+    <div class="vqhead">
+      <span class="vqk">Una pausa di un minuto</span>
+      <h2 id="vqt"><?= e($vq['intro'] ?: 'Due domande e riprendi.') ?></h2>
+    </div>
+    <form id="vqf" class="vqbody">
+      <input type="hidden" name="csrf" value="<?= csrf() ?>">
+      <input type="hidden" name="quiz" value="<?= (int)$vq['id'] ?>">
+      <?php foreach ($vq['domande'] as $n => $d): ?>
+        <div class="vqq" data-q="<?= $d['id'] ?>" data-se-q="<?= $d['se_q'] ?>"
+             data-se-v="<?= e($d['se_v']) ?>" data-obbl="<?= $d['obbl'] ?>">
+          <?php if ($d['help']): ?><p class="vqhelp"><?= e($d['help']) ?></p><?php endif; ?>
+          <p class="vqlab"><span><?= $n + 1 ?></span><?= e($d['label']) ?></p>
+          <?php if ($d['type'] === 'text'): ?>
+            <textarea class="vqtxt" name="a[<?= $d['id'] ?>]" rows="3"
+                      placeholder="Scrivi quello che ti viene" maxlength="2000"></textarea>
+          <?php else: ?>
+            <div class="vqopts">
+              <?php foreach ($d['options'] as $o): ?>
+                <label class="vqo"><input type="radio" name="a[<?= $d['id'] ?>]" value="<?= e($o) ?>">
+                  <span><?= e($o) ?></span></label>
+              <?php endforeach; ?>
+              <?php if ($d['altro']): ?>
+                <label class="vqo"><input type="radio" name="a[<?= $d['id'] ?>]" value="Altro">
+                  <span>Altro</span></label>
+                <input class="vqtxt vqaltro" type="text" placeholder="Dicci quale" maxlength="500" hidden>
+              <?php endif; ?>
+            </div>
+          <?php endif; ?>
+        </div>
+      <?php endforeach; ?>
+      <p class="vqerr" id="vqerr" hidden></p>
+      <button class="btn w" type="submit" id="vqgo">Invia e riprendi il video</button>
+    </form>
+    <div class="vqdone" id="vqdone" hidden>
+      <p><?= e($vq['chiusura'] ?: 'Grazie. Ora puoi riprendere il video.') ?></p>
+      <button class="btn w" type="button" id="vqclose">Riprendi</button>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <script>
 const LID=<?= (int)$id ?>;
 const JUMP=parseInt(new URLSearchParams(location.search).get('t')||'0',10);
@@ -245,4 +311,115 @@ function disegnaSalti(){
 disegnaSalti();
 document.getElementById('stampa').addEventListener('click',()=>window.print());
 </script>
+
+<?php if ($vq): ?>
+<script>
+(function () {
+  var w = document.getElementById('vqw'), f = document.getElementById('vqf');
+  var vd = document.getElementById('vid');
+  if (!w || !f || !vd) return;
+  var QUANDO = <?= (int)$vq['at_sec'] ?>, fatto = false, aperto = false;
+
+  /* ── la diramazione: una domanda compare solo se la risposta indicata e' quella ── */
+  function rami() {
+    f.querySelectorAll('.vqq').forEach(function (q) {
+      var seq = +q.dataset.seQ;
+      if (!seq) return;
+      var scelta = f.querySelector('input[name="a[' + seq + ']"]:checked');
+      q.hidden = !scelta || scelta.value !== q.dataset.seV;
+    });
+  }
+  /* la voce Altro apre il campo libero */
+  function altro() {
+    f.querySelectorAll('.vqaltro').forEach(function (inp) {
+      var grp = inp.closest('.vqopts');
+      var sc = grp.querySelector('input[type=radio]:checked');
+      inp.hidden = !sc || sc.value !== 'Altro';
+      if (inp.hidden) inp.value = '';
+    });
+  }
+  f.addEventListener('change', function () { rami(); altro(); });
+  rami(); altro();
+
+  function apri() {
+    if (fatto || aperto) return;
+    aperto = true;
+    try { vd.pause(); } catch (e) {}
+    w.hidden = false;
+    document.body.style.overflow = 'hidden';
+    var r = f.querySelector('input[type=radio]');
+    if (r) r.focus();
+  }
+  function chiudi() {
+    aperto = false; fatto = true;
+    w.hidden = true;
+    document.body.style.overflow = '';
+    vd.play().catch(function () {});
+  }
+
+  /* ── scatta al minuto, e non si aggira andando avanti ── */
+  vd.addEventListener('timeupdate', function () { if (vd.currentTime >= QUANDO) apri(); });
+  vd.addEventListener('seeking', function () {
+    if (!fatto && vd.currentTime > QUANDO + 0.5) { vd.currentTime = QUANDO; apri(); }
+  });
+  vd.addEventListener('play', function () { if (aperto) vd.pause(); });
+
+  /* ── non si chiude: niente Esc, niente clic fuori ── */
+  w.addEventListener('click', function (e) { e.stopPropagation(); });
+  document.addEventListener('keydown', function (e) {
+    if (aperto && e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+
+  /* ── invio ── */
+  var err = document.getElementById('vqerr'), go = document.getElementById('vqgo');
+  f.addEventListener('submit', function (e) {
+    e.preventDefault();
+    err.hidden = true;
+
+    var mancanti = [];
+    f.querySelectorAll('.vqq').forEach(function (q) {
+      if (q.hidden || q.dataset.obbl !== '1') return;
+      var t = q.querySelector('.vqtxt:not(.vqaltro)');
+      if (t) { if (!t.value.trim()) mancanti.push(q); return; }
+      var sc = q.querySelector('input[type=radio]:checked');
+      if (!sc) { mancanti.push(q); return; }
+      var alt = q.querySelector('.vqaltro');
+      if (sc.value === 'Altro' && alt && !alt.value.trim()) mancanti.push(q);
+    });
+    if (mancanti.length) {
+      err.textContent = mancanti.length === 1
+        ? 'Manca una risposta.' : 'Mancano ' + mancanti.length + ' risposte.';
+      err.hidden = false;
+      mancanti[0].scrollIntoView({block: 'center', behavior: 'smooth'});
+      return;
+    }
+
+    var d = new FormData(f);
+    /* la voce Altro viaggia col testo scritto accanto */
+    f.querySelectorAll('.vqaltro').forEach(function (inp) {
+      if (inp.hidden || !inp.value.trim()) return;
+      var q = inp.closest('.vqq');
+      d.set('a[' + q.dataset.q + ']', 'Altro: ' + inp.value.trim());
+    });
+    /* i rami non percorsi non si mandano */
+    f.querySelectorAll('.vqq').forEach(function (q) { if (q.hidden) d.delete('a[' + q.dataset.q + ']'); });
+
+    go.disabled = true; go.textContent = 'Invio…';
+    fetch('vquiz.php', {method: 'POST', body: d, credentials: 'same-origin'})
+      .then(function (r) { return r.json().catch(function () { return {}; }); })
+      .then(function (j) {
+        if (!j.ok) throw new Error(j.error || 'errore');
+        f.hidden = true;
+        document.getElementById('vqdone').hidden = false;
+      })
+      .catch(function () {
+        go.disabled = false; go.textContent = 'Invia e riprendi il video';
+        err.textContent = 'Non sono riuscito a salvare. Controlla la connessione e riprova.';
+        err.hidden = false;
+      });
+  });
+  document.getElementById('vqclose').addEventListener('click', chiudi);
+})();
+</script>
+<?php endif; ?>
 <?php mbar('corso.php'); foot();
