@@ -48,7 +48,8 @@ head('Supporto'); topbar($code, '', 'supporto.php'); ?>
           <div class="mday" data-day="<?= e($g) ?>"><span><?= e($g) ?></span></div>
         <?php endif; ?>
         <div class="bub <?= $m['sender'] === 'utente' ? 'me' : 'them' ?>" data-id="<?= (int)$m['id'] ?>">
-          <p><?= nl2br(e($m['body'])) ?></p>
+          <?php if ($m['body'] !== ''): ?><p><?= nl2br(e($m['body'])) ?></p><?php endif; ?>
+          <?= allegato_html($m) ?>
           <span class="tm"><?= e(date('H:i', strtotime($m['created_at']))) ?></span>
         </div>
       <?php endforeach; ?>
@@ -66,6 +67,7 @@ head('Supporto'); topbar($code, '', 'supporto.php'); ?>
   </form>
 </div>
 
+<script src="assets/js/chat.js?v=<?= @filemtime(APP_ROOT.'/assets/js/chat.js') ?>"></script>
 <script>
 const CSRF=<?= json_encode(csrf()) ?>;
 let last=<?= $last ?>, busy=false, oggi=<?= json_encode(date('j/n/Y')) ?>;
@@ -88,8 +90,9 @@ function bolla(m){
   separatore();
   const d=document.createElement('div');
   d.className='bub '+(m.mine?'me':'them'); d.dataset.id=m.id;
-  d.innerHTML='<p></p><span class="tm">'+m.at.slice(-5)+'</span>';
-  d.querySelector('p').textContent=m.body;
+  d.innerHTML=(m.body?'<p></p>':'')+'<span class="tm">'+m.at.slice(-5)+'</span>';
+  if(m.body) d.querySelector('p').textContent=m.body;
+  if(m.file) d.insertBefore(allegatoNodo(m.file, m.id, ''), d.querySelector('.tm'));
   sc.appendChild(d);
 }
 function leggi(){

@@ -43,6 +43,19 @@ if ($t === 'v' || $t === 'p') {
     // il pdf si guarda nel browser, lo zip non si puo' che scaricare
     $inline = !$zip;
     $name = preg_replace('/[^\w\-. ]/u', '', $m['orig_name'] ?: ($m['title'] . ($zip ? '.zip' : '.pdf')));
+} elseif ($t === 'g') {
+    // allegato di un messaggio: lo vede l'admin e il corsista di quella conversazione
+    $s = db()->prepare('SELECT * FROM messages WHERE id=?'); $s->execute([$id]);
+    $m = $s->fetch();
+    if (!$m || empty($m['file'])) { http_response_code(404); exit; }
+    if (!$isAdmin) {
+        $c = current_code();
+        if (!$c || (int)$c['id'] !== (int)$m['code_id']) { http_response_code(403); exit('Accesso non consentito.'); }
+    }
+    $path = STORAGE . '/chat/' . basename((string)$m['file']);
+    $mime = 'application/pdf';
+    $inline = empty($_GET['dl']);          // con ?dl=1 il browser lo scarica invece di aprirlo
+    $name = preg_replace('/[^\w\-. ]/u', '', (string)($m['file_name'] ?: $m['file'])) ?: 'documento.pdf';
 } else { http_response_code(400); exit; }
 
 if (!$path || !is_file($path)) { http_response_code(404); exit('File non trovato.'); }
@@ -56,7 +69,7 @@ header('Content-Type: ' . $mime);
 header('Accept-Ranges: bytes');
 header('Cache-Control: private, max-age=0, no-store');
 header('X-Content-Type-Options: nosniff');
-if ($t === 'm') header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment')
+if ($t === 'm' || $t === 'g') header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment')
                      . '; filename="' . $name . '"');
 
 $start = 0; $end = $size - 1;

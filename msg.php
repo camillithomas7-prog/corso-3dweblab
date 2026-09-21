@@ -8,6 +8,13 @@ declare(strict_types=1);
 require_once __DIR__ . '/inc/auth.php';
 header('Content-Type: application/json; charset=utf-8');
 
+// oltre post_max_size PHP butta via tutto il POST, campi compresi: senza questo
+// controllo l'errore che arriva al browser parla di sessione scaduta e non si capisce
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$_POST && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+    http_response_code(413);
+    exit(json_encode(['error' => "file troppo grande: il limite di questo server e' " . peso(chat_max_bytes())]));
+}
+
 $admin = current_admin();
 $code  = current_code();
 if (!$admin && !$code) { http_response_code(401); exit('{"error":"sessione scaduta"}'); }
@@ -24,11 +31,21 @@ $io = $admin ? 'admin' : 'utente';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
     $b = trim((string)($_POST['body'] ?? ''));
-    if ($b === '') { http_response_code(400); exit('{"error":"messaggio vuoto"}'); }
     if (mb_strlen($b) > 4000) $b = mb_substr($b, 0, 4000);
-    db()->prepare("INSERT INTO messages(code_id,sender,body,read_admin,read_user)
-                   VALUES(?,?,?,?,?)")
-        ->execute([$cid, $io, $b, $io === 'admin' ? 1 : 0, $io === 'utente' ? 1 : 0]);
+
+    // il messaggio puo' portare un PDF: allora il testo diventa una didascalia facoltativa
+    $file = ''; $fname = ''; $fsize = 0;
+    if (!empty($_FILES['file']['name'])) {
+        try { [$file, $fname, $fsize] = salva_allegato($_FILES['file']); }
+        catch (RuntimeException $e) {
+            http_response_code(400);
+            exit(json_encode(['error' => $e->getMessage()]));
+        }
+    } elseif ($b === '') { http_response_code(400); exit('{"error":"messaggio vuoto"}'); }
+
+    db()->prepare("INSERT INTO messages(code_id,sender,body,read_admin,read_user,file,file_name,file_size)
+                   VALUES(?,?,?,?,?,?,?,?)")
+        ->execute([$cid, $io, $b, $io === 'admin' ? 1 : 0, $io === 'utente' ? 1 : 0, $file, $fname, $fsize]);
 }
 
 // tutto ciò che è arrivato dall'altra parte risulta letto

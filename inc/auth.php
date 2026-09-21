@@ -209,13 +209,109 @@ function unread_admin(): int {
 }
 /** Un messaggio pronto da mostrare. */
 function msg_row(array $m): array {
-    return [
+    $r = [
         'id'   => (int)$m['id'],
         'mine' => false,
         'body' => (string)$m['body'],
         'who'  => $m['sender'],
         'at'   => date('d/m H:i', strtotime($m['created_at'])),
+        'file' => null,
     ];
+    if (!empty($m['file'])) {
+        $r['file'] = [
+            'name' => (string)($m['file_name'] ?: $m['file']),
+            'size' => peso((int)($m['file_size'] ?? 0)),
+        ];
+    }
+    return $r;
+}
+
+/** Nome file sicuro e irripetibile per lo storage. */
+function safe_name(string $orig, string $ext): string {
+    $b = pathinfo($orig, PATHINFO_FILENAME);
+    $b = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $b);
+    $b = trim(substr($b, 0, 60), '-') ?: 'file';
+    return date('Ymd-His') . '-' . bin2hex(random_bytes(3)) . '-' . $b . '.' . $ext;
+}
+
+/** Peso di un file in parole umane: 940 KB, 2,4 MB. */
+function peso(int $b): string {
+    if ($b <= 0) return '';
+    if ($b < 1024) return $b . ' B';
+    if ($b < 1048576) return round($b / 1024) . ' KB';
+    return str_replace('.', ',', (string)round($b / 1048576, 1)) . ' MB';
+}
+
+/**
+ * La scheda del PDF dentro una bolla di chat: si apre cliccandola,
+ * si scarica col bottone. $base serve all'admin, che sta in una sottocartella.
+ */
+function allegato_html(array $m, string $base = ''): string {
+    if (empty($m['file'])) return '';
+    $url  = $base . 'media.php?t=g&id=' . (int)$m['id'];
+    $nome = e((string)($m['file_name'] ?: 'documento.pdf'));
+    $kb   = peso((int)($m['file_size'] ?? 0));
+    return '<a class="fbox" href="' . $url . '" target="_blank" rel="noopener">'
+         . '<span class="fic"><svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor"'
+         . ' stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'
+         . '<path d="M11.5 2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6.5L11.5 2Z"/>'
+         . '<path d="M11.5 2v4.5H16"/></svg></span>'
+         . '<span class="ftx"><b>' . $nome . '</b><i>PDF' . ($kb ? ' · ' . e($kb) : '') . '</i></span>'
+         . '</a>'
+         . '<a class="fdl" href="' . $url . '&amp;dl=1" download>Scarica</a>';
+}
+
+/** Un limite di php.ini in byte: "64M" -> 67108864. */
+function ini_bytes(string $k): int {
+    $v = trim((string)ini_get($k)); if ($v === '') return 0;
+    $u = strtolower(substr($v, -1)); $n = (int)$v;
+    return match ($u) { 'g' => $n*1073741824, 'm' => $n*1048576, 'k' => $n*1024, default => (int)$v };
+}
+
+/**
+ * Quanto pesa al massimo un PDF mandato in chat: 25 MB, o meno se il
+ * server non arriva a tanto. Va a braccetto col messaggio mostrato in pagina.
+ */
+function chat_max_bytes(): int {
+    $u = ini_bytes('upload_max_filesize') ?: 2*1048576;
+    $p = ini_bytes('post_max_size')       ?: 8*1048576;
+    return max(262144, min(25*1048576, $u, $p - 262144));
+}
+
+/**
+ * Salva il PDF arrivato da una chat e restituisce [nome sul disco, nome originale, byte].
+ * Solleva un'eccezione con un messaggio gia' pronto da mostrare.
+ */
+function salva_allegato(array $f): array {
+    if (($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        throw new RuntimeException(match ((int)($f['error'] ?? 0)) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE =>
+                'il file supera il limite del server (' . ini_get('upload_max_filesize') . ')',
+            UPLOAD_ERR_PARTIAL => 'trasferimento interrotto, riprova',
+            default            => 'caricamento non riuscito',
+        });
+    }
+    if (strtolower(pathinfo((string)$f['name'], PATHINFO_EXTENSION)) !== 'pdf') {
+        throw new RuntimeException('in chat si possono mandare solo file PDF');
+    }
+    if ((int)$f['size'] > chat_max_bytes()) {
+        throw new RuntimeException('il PDF supera i ' . peso(chat_max_bytes()));
+    }
+    // fidarsi dell'estensione non basta: controllo la firma del file
+    $fp = fopen($f['tmp_name'], 'rb');
+    $magic = $fp ? fread($fp, 5) : '';
+    if ($fp) fclose($fp);
+    if ($magic !== '%PDF-') throw new RuntimeException('il file non e\' un PDF valido');
+
+    $dir = STORAGE . '/chat';
+    if (!is_dir($dir) && !@mkdir($dir, 0775, true)) throw new RuntimeException('cartella allegati non scrivibile');
+    $nome = safe_name((string)$f['name'], 'pdf');
+    if (!@move_uploaded_file($f['tmp_name'], "$dir/$nome")) {
+        throw new RuntimeException('impossibile salvare il file sul server');
+    }
+    @chmod("$dir/$nome", 0644);
+    $orig = preg_replace('#[\x00-\x1f/\\\\]+#', '', (string)$f['name']) ?: 'documento.pdf';
+    return [$nome, mb_substr($orig, 0, 120), (int)filesize("$dir/$nome")];
 }
 
 function e(?string $s): string { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }

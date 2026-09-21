@@ -9,6 +9,7 @@ storage/video/*
 storage/pdf/*
 storage/tmp/*
 storage/img/*
+storage/chat/*
 !storage/*/.gitkeep
 
 # ── solo anteprima locale, non va online ──

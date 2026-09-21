@@ -379,6 +379,16 @@ function migrate(PDO $p): void {
     }
     $p->exec("CREATE UNIQUE INDEX IF NOT EXISTS ix_codes_order
               ON codes(shopify_order_id) WHERE shopify_order_id <> ''");
+
+    // allegati in chat: il PDF vive in storage/chat, qui resta solo il riferimento
+    $mc = array_column($p->query('PRAGMA table_info(messages)')->fetchAll(), 'name');
+    foreach ([
+        'file'      => "TEXT NOT NULL DEFAULT ''",   // nome sul disco
+        'file_name' => "TEXT NOT NULL DEFAULT ''",   // nome originale, quello che vede il cliente
+        'file_size' => "INTEGER NOT NULL DEFAULT 0",
+    ] as $c => $def) {
+        if (!in_array($c, $mc, true)) $p->exec("ALTER TABLE messages ADD COLUMN $c $def");
+    }
 }
 
 function setting(string $k, ?string $def = null): ?string {

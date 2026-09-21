@@ -534,6 +534,34 @@ body.noscroll{overflow:hidden}
 .csend:hover{filter:brightness(1.08)}
 .cnote{margin-top:11px;font-size:12.5px;color:var(--dim);text-align:center}
 .cnote b{color:var(--ink2)}
+.cnote.ko{color:#ffb4b4}
+
+/* ── PDF allegato a un messaggio ──────────────────────── */
+.fbox{display:flex;align-items:center;gap:10px;margin-top:2px;padding:9px 11px;
+  border:1px solid rgba(255,255,255,.14);border-radius:11px;background:rgba(255,255,255,.05);
+  text-decoration:none;color:inherit;transition:background .14s,border-color .14s;min-width:min(240px,100%)}
+.fbox:hover{background:rgba(255,255,255,.09);border-color:rgba(110,231,255,.4)}
+.fbox .fic{flex:0 0 auto;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;
+  background:rgba(110,231,255,.14);color:var(--acc)}
+.fbox .ftx{min-width:0;display:block}
+.fbox .ftx b{display:block;font-size:13.5px;font-weight:600;line-height:1.35;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fbox .ftx i{display:block;font-style:normal;font-size:11.5px;opacity:.6;margin-top:1px}
+.fdl{display:inline-block;margin-top:7px;font-size:12.5px;font-weight:600;color:var(--acc);text-decoration:none}
+.fdl:hover{text-decoration:underline}
+
+/* graffetta e file in attesa, lato admin */
+.cclip{flex:0 0 auto;width:44px;height:44px;border:1px solid var(--line);border-radius:11px;
+  cursor:pointer;background:#0a0c14;color:var(--dim);display:grid;place-items:center;
+  transition:color .14s,border-color .14s}
+.cclip:hover{color:var(--acc);border-color:#2f6f80}
+.cpick{display:flex;align-items:center;gap:10px;margin-top:10px;padding:9px 12px;
+  border:1px solid rgba(110,231,255,.3);border-radius:10px;background:rgba(110,231,255,.07)}
+.cpick .pn{flex:1;min-width:0;font-size:13px;color:var(--ink2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cpick .px{flex:0 0 auto;width:24px;height:24px;border:0;border-radius:7px;cursor:pointer;
+  background:transparent;color:var(--dim);font-size:19px;line-height:1}
+.cpick .px:hover{color:var(--ink)}
 
 /* elenco conversazioni in admin */
 .cgrid{display:grid;gap:16px}

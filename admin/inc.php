@@ -82,13 +82,6 @@ function show_flash(): void {
 }
 function back(string $to): never { header("Location: $to"); exit; }
 
-/** Nome file sicuro e irripetibile per lo storage. */
-function safe_name(string $orig, string $ext): string {
-    $b = pathinfo($orig, PATHINFO_FILENAME);
-    $b = preg_replace('/[^a-zA-Z0-9._-]+/', '-', $b);
-    $b = trim(substr($b, 0, 60), '-') ?: 'file';
-    return date('Ymd-His') . '-' . bin2hex(random_bytes(3)) . '-' . $b . '.' . $ext;
-}
 /**
  * Durata di un video. Sugli hosting condivisi shell_exec è quasi sempre
  * disabilitato: in quel caso restituisce 0 e la durata la legge il browser,

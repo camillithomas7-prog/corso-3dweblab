@@ -9,7 +9,9 @@ $conv = db()->query("
   SELECT c.id, c.code, c.order_ref, p.first_name, p.last_name,
          (SELECT COUNT(*) FROM messages m WHERE m.code_id=c.id) AS n,
          (SELECT COUNT(*) FROM messages m WHERE m.code_id=c.id AND m.sender='utente' AND m.read_admin=0) AS nuovi,
-         (SELECT m.body FROM messages m WHERE m.code_id=c.id ORDER BY m.id DESC LIMIT 1) AS ultimo,
+         (SELECT CASE WHEN m.body <> '' THEN m.body
+                      WHEN m.file <> '' THEN 'PDF: '||m.file_name ELSE '' END
+          FROM messages m WHERE m.code_id=c.id ORDER BY m.id DESC LIMIT 1) AS ultimo,
          (SELECT m.sender FROM messages m WHERE m.code_id=c.id ORDER BY m.id DESC LIMIT 1) AS chi,
          (SELECT m.created_at FROM messages m WHERE m.code_id=c.id ORDER BY m.id DESC LIMIT 1) AS quando
   FROM codes c LEFT JOIN profiles p ON p.code_id=c.id
@@ -98,12 +100,20 @@ ahead('Supporto', 'chat.php'); show_flash(); ?>
         <?php foreach ($msgs as $m): ?>
           <div class="bub <?= $m['sender']==='admin' ? 'me' : 'them' ?>" data-id="<?= (int)$m['id'] ?>">
             <?php if ($m['sender']!=='admin'): ?><span class="nm"><?= e($nome($att)) ?></span><?php endif; ?>
-            <p><?= nl2br(e($m['body'])) ?></p>
+            <?php if ($m['body'] !== ''): ?><p><?= nl2br(e($m['body'])) ?></p><?php endif; ?>
+            <?= allegato_html($m, '../') ?>
             <span class="tm"><?= e(date('d/m H:i', strtotime($m['created_at']))) ?></span>
           </div>
         <?php endforeach; ?>
       </div>
       <form class="cbar" id="form">
+        <input type="file" id="pdf" accept="application/pdf,.pdf" hidden>
+        <button class="cclip" type="button" id="clip" aria-label="Allega un PDF" title="Allega un PDF">
+          <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+               stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15.5 9.2 9.8 14.9a3.3 3.3 0 0 1-4.7-4.7l6.2-6.2a2.2 2.2 0 0 1 3.1 3.1l-6.2 6.2a1.1 1.1 0 0 1-1.6-1.6l5.4-5.4"/>
+          </svg>
+        </button>
         <textarea id="txt" rows="1" placeholder="<?= $msgs ? 'Rispondi…' : 'Scrivi il primo messaggio…' ?>" maxlength="4000"></textarea>
         <button class="csend" type="submit" aria-label="Invia">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor"
@@ -112,8 +122,14 @@ ahead('Supporto', 'chat.php'); show_flash(); ?>
         </button>
       </form>
     </div>
-    <p class="cnote">Invio con <b>Invio</b>, a capo con <b>Maiusc + Invio</b>.</p>
+    <div class="cpick" id="pick" hidden>
+      <span class="pn" id="pickn"></span>
+      <button type="button" class="px" id="pickx" aria-label="Togli il file">&times;</button>
+    </div>
+    <p class="cnote" id="cnote">Invio con <b>Invio</b>, a capo con <b>Maiusc + Invio</b>.
+      Con la graffetta mandi un PDF (max <?= e(peso(chat_max_bytes())) ?>).</p>
 
+    <script src="../assets/js/chat.js?v=<?= @filemtime(APP_ROOT.'/assets/js/chat.js') ?>"></script>
     <script>
     const CSRF=<?= json_encode(csrf()) ?>, CID=<?= (int)$cid ?>;
     let last=<?= $last ?>, busy=false;
@@ -124,9 +140,10 @@ ahead('Supporto', 'chat.php'); show_flash(); ?>
       if(document.querySelector('[data-id="'+m.id+'"]')) return;
       const d=document.createElement('div');
       d.className='bub '+(m.mine?'me':'them'); d.dataset.id=m.id;
-      d.innerHTML=(m.mine?'':'<span class="nm"></span>')+'<p></p><span class="tm">'+m.at+'</span>';
+      d.innerHTML=(m.mine?'':'<span class="nm"></span>')+(m.body?'<p></p>':'')+'<span class="tm">'+m.at+'</span>';
       if(!m.mine) d.querySelector('.nm').textContent=CHI;
-      d.querySelector('p').textContent=m.body;
+      if(m.body) d.querySelector('p').textContent=m.body;
+      if(m.file) d.insertBefore(allegatoNodo(m.file, m.id, '../'), d.querySelector('.tm'));
       sc.appendChild(d);
     }
     function leggi(){
@@ -140,14 +157,43 @@ ahead('Supporto', 'chat.php'); show_flash(); ?>
     setInterval(leggi, 8000);
     tx.addEventListener('input',()=>{ tx.style.height='auto'; tx.style.height=Math.min(tx.scrollHeight,150)+'px'; });
     tx.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); fm.requestSubmit(); }});
+    // allegato: la graffetta apre il selettore, il file resta in attesa finche' non invii
+    const inp=document.getElementById('pdf'), pick=document.getElementById('pick'),
+          pickn=document.getElementById('pickn'), nota=document.getElementById('cnote');
+    const LIMITE=<?= chat_max_bytes() ?>;
+    function mostraPick(){
+      const f=inp.files[0];
+      pick.hidden=!f;
+      if(f) pickn.textContent='PDF pronto da inviare: '+f.name;
+    }
+    const NOTA=nota.innerHTML;
+    function errore(t){ nota.textContent=t; nota.classList.add('ko'); }
+    function pulisciErrore(){ nota.classList.remove('ko'); nota.innerHTML=NOTA; }
+    document.getElementById('clip').addEventListener('click',()=>inp.click());
+    document.getElementById('pickx').addEventListener('click',()=>{ inp.value=''; mostraPick(); });
+    inp.addEventListener('change',()=>{
+      const f=inp.files[0];
+      if(f && !/\.pdf$/i.test(f.name)){ inp.value=''; errore('Si possono allegare solo file PDF.'); return mostraPick(); }
+      if(f && f.size>LIMITE){ inp.value=''; errore('Il PDF e\' troppo grande: il limite e\' <?= e(peso(chat_max_bytes())) ?>.'); return mostraPick(); }
+      pulisciErrore(); mostraPick();
+    });
+
     fm.addEventListener('submit',e=>{
       e.preventDefault();
-      const b=tx.value.trim(); if(!b||busy) return;
+      const b=tx.value.trim(), f=inp.files[0];
+      if((!b&&!f)||busy) return;
       busy=true; tx.value=''; tx.style.height='auto';
-      fetch('../msg.php',{method:'POST',body:new URLSearchParams({csrf:CSRF,code:CID,body:b,since:last})})
+      const dati=new FormData();
+      dati.append('csrf',CSRF); dati.append('code',CID); dati.append('body',b); dati.append('since',last);
+      if(f) dati.append('file',f);
+      inp.value=''; mostraPick(); pulisciErrore();
+      fetch('../msg.php',{method:'POST',body:dati})
         .then(r=>r.json())
-        .then(j=>{ (j.messages||[]).forEach(m=>{ bolla(m); last=Math.max(last,m.id); }); giu(); })
-        .catch(()=>{ tx.value=b; })
+        .then(j=>{
+          if(j.error){ errore(j.error); tx.value=b; return; }
+          (j.messages||[]).forEach(m=>{ bolla(m); last=Math.max(last,m.id); }); giu();
+        })
+        .catch(()=>{ tx.value=b; errore('Invio non riuscito, riprova.'); })
         .finally(()=>{ busy=false; tx.focus(); });
     });
     </script>

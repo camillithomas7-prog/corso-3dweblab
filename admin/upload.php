@@ -25,12 +25,7 @@ function reply(array $d, int $code = 200): never {
 }
 if (!current_admin()) { reply(['error'=>'non autorizzato'], 403); }
 
-/** Quanto grande può essere un blocco su QUESTO server. */
-function ini_bytes(string $k): int {
-    $v = trim((string)ini_get($k)); if ($v==='') return 0;
-    $u = strtolower(substr($v,-1)); $n = (int)$v;
-    return match($u){ 'g'=>$n*1073741824, 'm'=>$n*1048576, 'k'=>$n*1024, default=>(int)$v };
-}
+/** Quanto grande può essere un blocco su QUESTO server. ini_bytes() sta in inc/auth.php. */
 function max_chunk(): int {
     $u = ini_bytes('upload_max_filesize') ?: 2*1048576;
     $p = ini_bytes('post_max_size')       ?: 8*1048576;
