@@ -19,14 +19,23 @@ $admin = current_admin();
 $code  = current_code();
 if (!$admin && !$code) { http_response_code(401); exit('{"error":"sessione scaduta"}'); }
 
-// l'admin sceglie la conversazione, il corsista ha solo la sua
-$cid = $admin ? (int)($_REQUEST['code'] ?? 0) : (int)$code['id'];
-if (!$cid) { http_response_code(400); exit('{"error":"conversazione non indicata"}'); }
-if ($admin) {
+/**
+ * Chi sta scrivendo. L'admin indica la conversazione col parametro code: e'
+ * quello che fa il pannello. Senza quel parametro comanda la sessione da
+ * corsista, se c'e': capita di averle tutte e due nello stesso browser quando
+ * provi il corso da cliente mentre sei dentro come admin, e da quella pagina
+ * si scrive come corsista, nella propria conversazione.
+ */
+$scelta = (int)($_REQUEST['code'] ?? 0);
+if ($admin && $scelta) {
+    $cid = $scelta; $io = 'admin';
     $c = db()->prepare('SELECT id FROM codes WHERE id=?'); $c->execute([$cid]);
     if (!$c->fetchColumn()) { http_response_code(404); exit('{"error":"conversazione inesistente"}'); }
+} elseif ($code) {
+    $cid = (int)$code['id']; $io = 'utente';
+} else {
+    http_response_code(400); exit('{"error":"conversazione non indicata"}');
 }
-$io = $admin ? 'admin' : 'utente';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
@@ -65,4 +74,4 @@ foreach ($q->fetchAll() as $m) {
 }
 // il token viaggia con la risposta: se la pagina ne ha uno vecchio (sessione
 // rigenerata in un'altra scheda) lo rinfresca e riprova, senza ricaricare
-echo json_encode(['messages' => $out, 'csrf' => csrf(), 'unread' => $admin ? unread_admin() : 0]);
+echo json_encode(['messages' => $out, 'csrf' => csrf(), 'unread' => $io === 'admin' ? unread_admin() : 0]);
