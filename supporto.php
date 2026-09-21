@@ -65,11 +65,12 @@ head('Supporto'); topbar($code, '', 'supporto.php'); ?>
         <path d="M16 2 8.5 9.5M16 2l-4.8 14-2.7-6.5L2 6.8 16 2Z"/></svg>
     </button>
   </form>
+  <p class="merr" id="err" hidden></p>
 </div>
 
 <script src="assets/js/chat.js?v=<?= @filemtime(APP_ROOT.'/assets/js/chat.js') ?>"></script>
 <script>
-const CSRF=<?= json_encode(csrf()) ?>;
+let CSRF=<?= json_encode(csrf()) ?>;
 let last=<?= $last ?>, busy=false, oggi=<?= json_encode(date('j/n/Y')) ?>;
 const sc=document.getElementById('scroll'), tx=document.getElementById('txt'),
       fm=document.getElementById('form'), sb=fm.querySelector('.msend'),
@@ -97,6 +98,7 @@ function bolla(m){
 }
 function leggi(){
   fetch('msg.php?since='+last).then(r=>r.json()).then(j=>{
+    if(j.csrf) CSRF=j.csrf;                       // token sempre fresco
     if(!j.messages||!j.messages.length) return;
     const inFondo=sc.scrollHeight-sc.scrollTop-sc.clientHeight<80;
     j.messages.forEach(m=>{ bolla(m); last=Math.max(last,m.id); });
@@ -113,14 +115,37 @@ tx.addEventListener('keydown',e=>{
     e.preventDefault(); fm.requestSubmit();
   }
 });
+const err=document.getElementById('err');
+function avviso(t){ err.textContent=t; err.hidden=!t; }
+
+/** Manda il messaggio. Se il token e' scaduto lo rinfresca e riprova una volta. */
+function invia(b, riprova){
+  return fetch('msg.php',{method:'POST',body:new URLSearchParams({csrf:CSRF,body:b,since:last})})
+    .then(r=>{
+      if(r.status===419 && riprova){                // token vecchio: ne prendo uno nuovo
+        return fetch('msg.php?since='+last).then(r2=>r2.json()).then(j2=>{
+          if(!j2.csrf) throw new Error('sessione');
+          CSRF=j2.csrf; return invia(b, false);
+        });
+      }
+      if(r.status===419) throw new Error('sessione');   // anche il token nuovo e' rifiutato
+      if(!r.ok) return r.json().catch(()=>({error:'invio non riuscito, riprova'}))
+                               .then(j=>{ throw new Error(j.error||'invio non riuscito'); });
+      return r.json();
+    });
+}
 fm.addEventListener('submit',e=>{
   e.preventDefault();
   const b=tx.value.trim(); if(!b||busy) return;
-  busy=true; sb.disabled=true; tx.value=''; altezza();
-  fetch('msg.php',{method:'POST',body:new URLSearchParams({csrf:CSRF,body:b,since:last})})
-    .then(r=>r.json())
+  busy=true; sb.disabled=true; tx.value=''; altezza(); avviso('');
+  invia(b, true)
     .then(j=>{ (j.messages||[]).forEach(m=>{ bolla(m); last=Math.max(last,m.id); }); giu(true); })
-    .catch(()=>{ tx.value=b; altezza(); sb.disabled=false; })
+    .catch(x=>{
+      tx.value=b; altezza(); sb.disabled=false;
+      avviso(String(x.message)==='sessione'
+        ? 'Sessione scaduta: ricarica la pagina e riprova.'
+        : 'Messaggio non inviato: ' + x.message);
+    })
     .finally(()=>{ busy=false; tx.focus(); });
 });
 </script>

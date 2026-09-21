@@ -63,4 +63,6 @@ foreach ($q->fetchAll() as $m) {
     $r['mine'] = ($m['sender'] === $io);
     $out[] = $r;
 }
-echo json_encode(['messages' => $out, 'unread' => $admin ? unread_admin() : 0]);
+// il token viaggia con la risposta: se la pagina ne ha uno vecchio (sessione
+// rigenerata in un'altra scheda) lo rinfresca e riprova, senza ricaricare
+echo json_encode(['messages' => $out, 'csrf' => csrf(), 'unread' => $admin ? unread_admin() : 0]);

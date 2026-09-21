@@ -131,7 +131,7 @@ ahead('Supporto', 'chat.php'); show_flash(); ?>
 
     <script src="../assets/js/chat.js?v=<?= @filemtime(APP_ROOT.'/assets/js/chat.js') ?>"></script>
     <script>
-    const CSRF=<?= json_encode(csrf()) ?>, CID=<?= (int)$cid ?>;
+    let CSRF=<?= json_encode(csrf()) ?>; const CID=<?= (int)$cid ?>;
     let last=<?= $last ?>, busy=false;
     const sc=document.getElementById('scroll'), tx=document.getElementById('txt'), fm=document.getElementById('form');
     const giu=()=>sc.scrollTop=sc.scrollHeight; giu();
@@ -148,6 +148,7 @@ ahead('Supporto', 'chat.php'); show_flash(); ?>
     }
     function leggi(){
       fetch('../msg.php?code='+CID+'&since='+last).then(r=>r.json()).then(j=>{
+        if(j.csrf) CSRF=j.csrf;                     // token sempre fresco
         if(!j.messages) return;
         const era=sc.scrollHeight-sc.scrollTop-sc.clientHeight<60;
         j.messages.forEach(m=>{ bolla(m); last=Math.max(last,m.id); });
@@ -178,6 +179,21 @@ ahead('Supporto', 'chat.php'); show_flash(); ?>
       pulisciErrore(); mostraPick();
     });
 
+    /** Manda il messaggio. Se il token e' scaduto lo rinfresca e riprova una volta. */
+    function spedisci(dati, riprova){
+      return fetch('../msg.php',{method:'POST',body:dati}).then(r=>{
+        if(r.status===419 && riprova){              // token vecchio: ne prendo uno nuovo
+          return fetch('../msg.php?code='+CID+'&since='+last).then(r2=>r2.json()).then(j2=>{
+            if(!j2.csrf) throw new Error('sessione');
+            CSRF=j2.csrf; dati.set('csrf',CSRF); return spedisci(dati, false);
+          });
+        }
+        if(r.status===419) throw new Error('sessione');   // anche il token nuovo e' rifiutato
+        if(!r.ok) return r.json().catch(()=>({error:'invio non riuscito, riprova'}))
+                                 .then(j=>{ throw new Error(j.error||'invio non riuscito'); });
+        return r.json();
+      });
+    }
     fm.addEventListener('submit',e=>{
       e.preventDefault();
       const b=tx.value.trim(), f=inp.files[0];
@@ -187,13 +203,14 @@ ahead('Supporto', 'chat.php'); show_flash(); ?>
       dati.append('csrf',CSRF); dati.append('code',CID); dati.append('body',b); dati.append('since',last);
       if(f) dati.append('file',f);
       inp.value=''; mostraPick(); pulisciErrore();
-      fetch('../msg.php',{method:'POST',body:dati})
-        .then(r=>r.json())
-        .then(j=>{
-          if(j.error){ errore(j.error); tx.value=b; return; }
-          (j.messages||[]).forEach(m=>{ bolla(m); last=Math.max(last,m.id); }); giu();
+      spedisci(dati, true)
+        .then(j=>{ (j.messages||[]).forEach(m=>{ bolla(m); last=Math.max(last,m.id); }); giu(); })
+        .catch(x=>{
+          tx.value=b;
+          errore(String(x.message)==='sessione'
+            ? 'Sessione scaduta: ricarica la pagina e riprova.'
+            : 'Messaggio non inviato: ' + x.message);
         })
-        .catch(()=>{ tx.value=b; errore('Invio non riuscito, riprova.'); })
         .finally(()=>{ busy=false; tx.focus(); });
     });
     </script>

@@ -535,6 +535,7 @@ body.noscroll{overflow:hidden}
 .cnote{margin-top:11px;font-size:12.5px;color:var(--dim);text-align:center}
 .cnote b{color:var(--ink2)}
 .cnote.ko{color:#ffb4b4}
+.merr{margin:0;padding:8px 14px 10px;font-size:13px;color:#ffb4b4;text-align:center;background:var(--card)}
 
 /* ── PDF allegato a un messaggio ──────────────────────── */
 .fbox{display:flex;align-items:center;gap:10px;margin-top:2px;padding:9px 11px;
