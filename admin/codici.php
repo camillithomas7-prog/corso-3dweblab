@@ -249,6 +249,9 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
               <span class="pill <?= $ne > 1 ? 'warn' : 'ok' ?>"><?= $ne > 1 ? $ne.'ª email' : 'inviata' ?></span>
               <div class="muted" style="font-size:11.5px;margin-top:3px"><?= e(date('d/m/y', strtotime((string)$r['email_sent_at']))) ?></div>
             <?php elseif ($r['email_error']): ?><span class="pill bad" title="<?= e($r['email_error']) ?>">fallita</span>
+            <?php elseif ($r['first_used_at']): ?>
+              <span class="muted" style="font-size:12.5px"
+                    title="Non gliel'abbiamo mandata da qui, ma e' entrato lo stesso: il codice l'ha ricevuto altrove.">non serve</span>
             <?php else: ?><span class="pill">da inviare</span><?php endif; ?></td>
         <td class="muted mono"><?= (int)$r['uses'] ?><?php if($r['last_used_at']): ?>
               <div style="font-size:11.5px"><?= e(date('d/m/y', strtotime($r['last_used_at']))) ?></div><?php endif; ?></td>
