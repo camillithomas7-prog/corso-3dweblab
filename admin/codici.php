@@ -266,9 +266,12 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
             <input type="hidden" name="action" value="mail"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
             <button class="btn gh sm"><?= $r['email_sent_at'] ? 'Rimanda' : 'Invia email' ?></button></form>
           <?php endif; ?>
-          <?php if (!$r['first_used_at'] && $r['email']): ?>
-            <a class="btn gh sm" href="scrivi.php?id=<?= (int)$r['id'] ?>" target="_blank" rel="noopener"
-               title="Apre Gmail con il messaggio gia' pronto: nome, codice e link">Gmail</a>
+          <?php if (!$r['first_used_at'] && $r['email']): $gia = (bool)$r['contacted_at']; ?>
+            <a class="btn <?= $gia ? 'ok' : 'dg' ?> sm" href="scrivi.php?id=<?= (int)$r['id'] ?>"
+               target="_blank" rel="noopener"
+               title="<?= $gia
+                   ? 'Gli hai gia\' scritto il '.e(date('d/m/Y', strtotime((string)$r['contacted_at']))).'. Premi per riaprire il messaggio.'
+                   : 'Da scrivere: apre Gmail col messaggio gia\' pronto, nome, codice e link' ?>">Gmail</a>
           <?php endif; ?>
           <a class="btn gh sm" href="cliente.php?id=<?= (int)$r['id'] ?>">Scheda</a>
           <a class="btn gh sm" href="codici.php?edit=<?= (int)$r['id'] ?>">Modifica</a>
@@ -304,6 +307,15 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
   var sc = parseInt(new URLSearchParams(location.search).get('sc') || '', 10);
   if (sc > 0) window.scrollTo(0, sc);
 })();
+
+// Il bottone Gmail diventa verde appena lo premi: la scheda dell'elenco resta
+// aperta mentre scrivi di la', e cosi' vedi subito chi hai gia' gestito.
+document.addEventListener('click', function (e) {
+  var a = e.target.closest('a[href^="scrivi.php"]');
+  if (!a) return;
+  a.classList.remove('dg'); a.classList.add('ok');
+  a.title = 'Gli hai appena scritto. Premi per riaprire il messaggio.';
+});
 
 // Sollecito: le mail partono una per volta, cosi' nessuna richiesta resta
 // appesa mezzo minuto e vedi il conteggio salire mentre vanno.

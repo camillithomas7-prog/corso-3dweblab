@@ -59,6 +59,8 @@ input,select,textarea,button{font:inherit;color:inherit}
 .btn.sm{font-size:13px;padding:8px 13px;border-radius:7px}
 .btn.dg{background:transparent;border-color:#3d2020;color:var(--bad)}
 .btn.dg:hover{background:var(--bad-bg)}
+.btn.ok{background:transparent;border-color:#1c3d2a;color:var(--ok)}
+.btn.ok:hover{background:var(--ok-bg)}
 .btn.w{width:100%}
 .btn[disabled]{opacity:.45;pointer-events:none}
 
