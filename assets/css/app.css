@@ -303,6 +303,21 @@ table.tb tr:hover td{background:#0d101a}
 table.tb .ac{display:flex;gap:6px;justify-content:flex-end}
 .codecell{font-family:"Space Grotesk",monospace;font-weight:600;letter-spacing:.06em;color:var(--acc)}
 
+/* Il pannello sta su schermi larghi: le tabelle hanno molte colonne e non
+   ha senso comprimerle in 1240px mentre ai lati resta mezzo schermo vuoto.
+   Le pagine del corso restano strette, perche' li' si legge. */
+@media(min-width:1380px){ .wrap.adm{max-width:1520px} }
+@media(min-width:1700px){ .wrap.adm{max-width:1740px;padding:0 32px} }
+
+/* sui monitor grandi i campi non diventano righe lunghissime: restano leggibili */
+@media(min-width:1380px){ .wrap.adm .fld .inp, .wrap.adm .fld input, .wrap.adm .fld select,
+  .wrap.adm .fld textarea{ max-width:760px } }
+
+/* nelle tabelle il codice sta su una riga sola e i bottoni non vanno a capo */
+table.tb .codecell{white-space:nowrap}
+table.tb td:last-child{white-space:nowrap}
+table.tb .ac{flex-wrap:nowrap}
+
 /* ── admin nav ────────────────────────────────────────── */
 .anav{display:flex;gap:4px;overflow-x:auto;padding:0 0 2px;margin-bottom:20px;
   border-bottom:1px solid var(--line2);-webkit-overflow-scrolling:touch}

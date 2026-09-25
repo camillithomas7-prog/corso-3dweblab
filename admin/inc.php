@@ -13,7 +13,7 @@ function ahead(string $title, string $active): void {
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/app.css?v=<?= @filemtime(APP_ROOT."/assets/css/app.css") ?>">
 </head><body>
-<div class="top"><div class="wrap in">
+<div class="top"><div class="wrap adm in">
   <a class="lg" href="dashboard.php"><img src="../assets/img/logo-light.png" alt="3D WEB LAB"></a>
   <span class="pill acc">Admin</span>
   <span class="sp"></span>
@@ -29,7 +29,7 @@ function ahead(string $title, string $active): void {
   <a class="btn gh sm" href="../corso.php" target="_blank" rel="noopener">Vedi il corso</a>
   <a class="btn gh sm" href="logout.php">Esci</a>
 </div></div>
-<div class="wrap" style="padding-top:20px;padding-bottom:60px">
+<div class="wrap adm" style="padding-top:20px;padding-bottom:60px">
 <nav class="anav">
   <?php $nl = 0; try { $nl = unread_admin(); } catch (Throwable $e) {}
   foreach ([
