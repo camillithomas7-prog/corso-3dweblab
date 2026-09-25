@@ -374,8 +374,14 @@ function migrate(PDO $p): void {
         'shopify_order_id' => "TEXT NOT NULL DEFAULT ''",
         'email_sent_at'    => "TEXT",
         'email_error'      => "TEXT NOT NULL DEFAULT ''",
+        // quante mail col codice sono partite: la prima, poi i solleciti
+        'email_count'      => "INTEGER NOT NULL DEFAULT 0",
     ] as $c => $def) {
         if (!in_array($c, $cols, true)) $p->exec("ALTER TABLE codes ADD COLUMN $c $def");
+    }
+    // chi l'aveva gia' ricevuta prima di questa colonna conta come una
+    if (!in_array('email_count', $cols, true)) {
+        $p->exec("UPDATE codes SET email_count=1 WHERE email_sent_at IS NOT NULL AND email_sent_at <> ''");
     }
     $p->exec("CREATE UNIQUE INDEX IF NOT EXISTS ix_codes_order
               ON codes(shopify_order_id) WHERE shopify_order_id <> ''");

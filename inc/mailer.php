@@ -89,8 +89,12 @@ function tpl(string $t, array $v): string {
     return $t;
 }
 
-/** Manda la mail con il codice. Lancia un'eccezione se non riesce. */
-function invia_codice(array $code): void {
+/**
+ * Manda la mail con il codice. Lancia un'eccezione se non riesce.
+ * $numero e' a che giro siamo: 1 e' la mail dell'ordine, da 2 in su e' un
+ * sollecito a chi non e' ancora entrato, e cambia oggetto e testo d'apertura.
+ */
+function invia_codice(array $code, int $numero = 1): void {
     $host = setting('smtp_host', ''); $user = setting('smtp_user', '');
     $pass = setting('smtp_pass', '');
     if (!$host || !$user || !$pass) throw new RuntimeException('SMTP non configurato in Impostazioni');
@@ -107,8 +111,15 @@ function invia_codice(array $code): void {
         'ordine' => $code['order_ref'] ?: '',
         'corso'  => setting('course_name', '3D WEB LAB'),
     ];
-    $subject = tpl(setting('mail_subject', 'Il tuo accesso a {corso}'), $vars);
-    $intro   = tpl(setting('mail_intro', "Grazie per il tuo acquisto.\nEcco il codice per entrare nel corso."), $vars);
+    $sollecito = $numero >= 2;
+    $subject = tpl($sollecito
+        ? setting('mail_subject_2', 'Il tuo accesso a {corso} ti aspetta')
+        : setting('mail_subject', 'Il tuo accesso a {corso}'), $vars);
+    $intro   = tpl($sollecito
+        ? setting('mail_intro_2', "Ti riscriviamo perché non risulti ancora entrato nel corso: "
+            . "può darsi che la prima mail ti sia sfuggita.\nEcco di nuovo il tuo codice, "
+            . "bastano dieci secondi per entrare.")
+        : setting('mail_intro', "Grazie per il tuo acquisto.\nEcco il codice per entrare nel corso."), $vars);
     $firma   = tpl(setting('mail_sign', '3D WEB LAB'), $vars);
 
     $html = mail_html($vars, $intro, $firma);

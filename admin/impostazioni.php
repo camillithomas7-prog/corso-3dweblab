@@ -9,7 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($a === 'save') {
         foreach (['course_name','site_url','shopify_secret','shopify_match',
                   'smtp_host','smtp_port','smtp_sec','smtp_user','smtp_from','smtp_name',
-                  'mail_subject','mail_intro','mail_sign'] as $k) {
+                  'mail_subject','mail_intro','mail_sign',
+                  'mail_subject_2','mail_intro_2'] as $k) {
             if (array_key_exists($k, $_POST)) set_setting($k, trim((string)$_POST[$k]));
         }
         // la password si tocca solo se ne scrivi una nuova
@@ -108,6 +109,15 @@ ahead('Impostazioni', 'impostazioni.php'); show_flash(); ?>
       <div class="hint">Segnaposto disponibili: <b>{nome}</b> {codice} {link} {ordine} {corso}</div></div>
     <div class="fld"><label>Firma</label>
       <textarea class="inp" name="mail_sign" style="min-height:64px"><?= e($g('mail_sign', "3D WEB LAB\nPer qualsiasi problema scrivi a supporto@3dweblab.it")) ?></textarea></div>
+
+    <div class="fld" style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line2)">
+      <label>Oggetto del sollecito</label>
+      <input class="inp" name="mail_subject_2" value="<?= e($g('mail_subject_2','Il tuo accesso a {corso} ti aspetta')) ?>">
+      <div class="hint">Questo parte dalla seconda mail in poi, quando dai il sollecito
+        dai Codici a chi non è ancora entrato.</div></div>
+    <div class="fld"><label>Testo di apertura del sollecito</label>
+      <textarea class="inp" name="mail_intro_2" style="min-height:96px"><?= e($g('mail_intro_2', "Ti riscriviamo perché non risulti ancora entrato nel corso: può darsi che la prima mail ti sia sfuggita.\nEcco di nuovo il tuo codice, bastano dieci secondi per entrare.")) ?></textarea>
+      <div class="hint">Stessi segnaposto: <b>{nome}</b> {codice} {link} {ordine} {corso}</div></div>
     <button class="btn">Salva impostazioni</button>
   </div>
 </div>

@@ -5,6 +5,22 @@ require_admin();
 $made = [];
 
 /**
+ * Manda la mail col codice e segna a che giro siamo: la prima e' quella
+ * dell'ordine, dalla seconda in poi e' un sollecito. L'errore resta scritto
+ * sulla riga, cosi' si vede dall'elenco chi non l'ha ricevuta.
+ */
+function spedisci_codice(array $c, int $numero): void {
+    try {
+        invia_codice($c, $numero);
+    } catch (Throwable $e) {
+        db()->prepare('UPDATE codes SET email_error=? WHERE id=?')->execute([$e->getMessage(), $c['id']]);
+        throw $e;
+    }
+    db()->prepare("UPDATE codes SET email_sent_at=datetime('now'), email_error='', email_count=?
+                   WHERE id=?")->execute([$numero, $c['id']]);
+}
+
+/**
  * Dopo un'azione si torna esattamente dov'eri: stessa ricerca e stesso punto
  * della pagina. Con duecento codici in elenco, ripartire dall'inizio ogni
  * volta che premi un bottone e' una piccola tortura.
@@ -63,13 +79,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $q = db()->prepare('SELECT * FROM codes WHERE id=?'); $q->execute([(int)$_POST['id']]);
         $c = $q->fetch();
         if (!$c) flash('Codice inesistente.', 'err');
-        else try {
-            invia_codice($c);
-            db()->prepare("UPDATE codes SET email_sent_at=datetime('now'), email_error='' WHERE id=?")->execute([$c['id']]);
-            flash('Email inviata a ' . $c['email']);
+        else {
+            $n = (int)$c['email_count'] + 1;
+            try {
+                spedisci_codice($c, $n);
+                flash(($n > 1 ? $n . 'ª email inviata a ' : 'Email inviata a ') . $c['email']);
+            } catch (Throwable $e) {
+                flash('Invio fallito: ' . $e->getMessage(), 'err');
+            }
+        }
+    } elseif ($a === 'mail_uno') {
+        // un solo invio, chiamato in fila dal bottone del sollecito: risponde in JSON
+        header('Content-Type: application/json; charset=utf-8');
+        $q = db()->prepare('SELECT * FROM codes WHERE id=?'); $q->execute([(int)($_POST['id'] ?? 0)]);
+        $c = $q->fetch();
+        if (!$c) exit(json_encode(['error' => 'codice inesistente']));
+        $n = (int)$c['email_count'] + 1;
+        try {
+            spedisci_codice($c, $n);
+            exit(json_encode(['ok' => true, 'n' => $n, 'chi' => $c['email']]));
         } catch (Throwable $e) {
-            db()->prepare('UPDATE codes SET email_error=? WHERE id=?')->execute([$e->getMessage(), $c['id']]);
-            flash('Invio fallito: ' . $e->getMessage(), 'err');
+            exit(json_encode(['error' => $e->getMessage(), 'chi' => $c['email']]));
         }
     }
     torna_al_punto();
@@ -88,6 +118,11 @@ if ($f !== '') { $sql .= ' WHERE c.code LIKE ? OR c.label LIKE ? OR c.order_ref 
                  $par = array_fill(0, 7, "%$f%"); }
 $sql .= ' ORDER BY c.created_at DESC, c.id DESC LIMIT 400';
 $st = db()->prepare($sql); $st->execute($par); $rows = $st->fetchAll();
+// chi non e' mai entrato nel portale e un indirizzo ce l'ha: sono loro da sollecitare
+$dasoll = db()->query("SELECT id FROM codes
+                       WHERE status='active' AND TRIM(email) <> '' AND first_used_at IS NULL
+                       ORDER BY created_at DESC, id DESC")->fetchAll(PDO::FETCH_COLUMN);
+
 $ed = null;
 if ($eid = (int)($_GET['edit'] ?? 0)) { $s=db()->prepare('SELECT * FROM codes WHERE id=?'); $s->execute([$eid]); $ed=$s->fetch(); }
 
@@ -167,11 +202,22 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
 
 <div class="card">
   <div class="hd"><h3>Codici emessi</h3>
-    <form method="get" style="display:flex;gap:8px">
-      <input class="inp" name="q" value="<?= e($f) ?>" placeholder="Cerca codice, nome, telefono…" style="width:210px;padding:8px 11px;font-size:14px">
-      <button class="btn gh sm">Cerca</button>
-    </form>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <?php if ($dasoll): ?>
+        <button class="btn sm" id="soll" data-ids="<?= e(json_encode(array_map('intval', $dasoll))) ?>">
+          Sollecita chi non è entrato (<?= count($dasoll) ?>)</button>
+      <?php endif; ?>
+      <form method="get" style="display:flex;gap:8px">
+        <input class="inp" name="q" value="<?= e($f) ?>" placeholder="Cerca codice, nome, telefono…" style="width:210px;padding:8px 11px;font-size:14px">
+        <button class="btn gh sm">Cerca</button>
+      </form>
+    </div>
   </div>
+  <?php if ($dasoll): ?>
+    <div class="bd" style="padding-top:0"><p class="muted" style="font-size:13.5px;margin:0" id="sollnota">
+      Manda di nuovo il codice a chi non ha mai fatto accesso. Ognuno riceve il testo del
+      sollecito e sulla sua riga compare a che mail siamo arrivati.</p></div>
+  <?php endif; ?>
   <?php if (!$rows): ?><div class="bd"><p class="muted"><?= $f ? 'Nessun risultato.' : 'Nessun codice generato.' ?></p></div>
   <?php else: ?>
   <div class="tw"><table class="tb">
@@ -197,8 +243,11 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
             <?php elseif ($scad): ?><span class="pill warn">scaduto</span>
             <?php elseif ($r['first_used_at']): ?><span class="pill ok">in uso</span>
             <?php else: ?><span class="pill">non usato</span><?php endif; ?></td>
-        <td><?php if (!$r['email']): ?><span class="muted" style="font-size:12.5px">—</span>
-            <?php elseif ($r['email_sent_at']): ?><span class="pill ok">inviata</span>
+        <td><?php $ne = (int)$r['email_count'];
+            if (!$r['email']): ?><span class="muted" style="font-size:12.5px">—</span>
+            <?php elseif ($r['email_sent_at']): ?>
+              <span class="pill <?= $ne > 1 ? 'warn' : 'ok' ?>"><?= $ne > 1 ? $ne.'ª email' : 'inviata' ?></span>
+              <div class="muted" style="font-size:11.5px;margin-top:3px"><?= e(date('d/m/y', strtotime((string)$r['email_sent_at']))) ?></div>
             <?php elseif ($r['email_error']): ?><span class="pill bad" title="<?= e($r['email_error']) ?>">fallita</span>
             <?php else: ?><span class="pill">da inviare</span><?php endif; ?></td>
         <td class="muted mono"><?= (int)$r['uses'] ?><?php if($r['last_used_at']): ?>
@@ -243,6 +292,44 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
   }, true);
   var sc = parseInt(new URLSearchParams(location.search).get('sc') || '', 10);
   if (sc > 0) window.scrollTo(0, sc);
+})();
+
+// Sollecito: le mail partono una per volta, cosi' nessuna richiesta resta
+// appesa mezzo minuto e vedi il conteggio salire mentre vanno.
+(function () {
+  var b = document.getElementById('soll');
+  if (!b) return;
+  var nota = document.getElementById('sollnota'), testo = b.textContent.trim();
+  var ids = JSON.parse(b.dataset.ids), CSRF = <?= json_encode(csrf()) ?>;
+
+  b.addEventListener('click', function () {
+    if (!confirm('Rimandare il codice a ' + ids.length + ' clienti che non sono mai entrati?')) return;
+    b.disabled = true;
+    var fatte = 0, errori = [];
+
+    function prossimo(i) {
+      if (i >= ids.length) return fine();
+      b.textContent = 'Invio… ' + (i + 1) + ' di ' + ids.length;
+      fetch('codici.php', {
+        method: 'POST',
+        body: new URLSearchParams({csrf: CSRF, action: 'mail_uno', id: ids[i]})
+      })
+        .then(function (r) { return r.json(); })
+        .catch(function () { return {error: 'rete non raggiungibile'}; })
+        .then(function (j) {
+          if (j && j.ok) fatte++; else errori.push((j && j.chi ? j.chi + ': ' : '') + ((j && j.error) || 'errore'));
+          prossimo(i + 1);
+        });
+    }
+    function fine() {
+      b.textContent = testo;
+      nota.textContent = fatte + ' email inviate'
+        + (errori.length ? ', ' + errori.length + ' non partite (' + errori[0] + ')' : '')
+        + '. Ricarico la pagina…';
+      setTimeout(function () { location.reload(); }, 1600);
+    }
+    prossimo(0);
+  });
 })();
 </script>
 <?php afoot();
