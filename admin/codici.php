@@ -4,6 +4,20 @@ require_once dirname(__DIR__) . '/inc/mailer.php';
 require_admin();
 $made = [];
 
+/**
+ * Dopo un'azione si torna esattamente dov'eri: stessa ricerca e stesso punto
+ * della pagina. Con duecento codici in elenco, ripartire dall'inizio ogni
+ * volta che premi un bottone e' una piccola tortura.
+ */
+function torna_al_punto(): never {
+    $p = [];
+    $q  = trim((string)($_POST['q'] ?? ''));
+    $sc = (int)($_POST['sc'] ?? 0);
+    if ($q !== '')  $p['q']  = $q;
+    if ($sc > 0)    $p['sc'] = $sc;
+    back('codici.php' . ($p ? '?' . http_build_query($p) : ''));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
     $a = $_POST['action'] ?? '';
@@ -58,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('Invio fallito: ' . $e->getMessage(), 'err');
         }
     }
-    back('codici.php');
+    torna_al_punto();
 }
 boot_session();
 $made = $_SESSION['made'] ?? []; unset($_SESSION['made']);
@@ -211,4 +225,24 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
   </table></div>
   <?php endif; ?>
 </div>
+
+<script>
+// ogni azione porta con se' la ricerca in corso e il punto in cui sei:
+// il server te li rimanda indietro e la pagina si riposiziona da sola
+(function () {
+  var Q = <?= json_encode($f) ?>;
+  document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (!f.matches('form[method="post"]')) return;
+    [['sc', Math.round(window.scrollY)], ['q', Q]].forEach(function (kv) {
+      if (f.querySelector('[name="' + kv[0] + '"]')) return;
+      var i = document.createElement('input');
+      i.type = 'hidden'; i.name = kv[0]; i.value = kv[1];
+      f.appendChild(i);
+    });
+  }, true);
+  var sc = parseInt(new URLSearchParams(location.search).get('sc') || '', 10);
+  if (sc > 0) window.scrollTo(0, sc);
+})();
+</script>
 <?php afoot();
