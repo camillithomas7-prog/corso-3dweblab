@@ -376,6 +376,8 @@ function migrate(PDO $p): void {
         'email_error'      => "TEXT NOT NULL DEFAULT ''",
         // quante mail col codice sono partite: la prima, poi i solleciti
         'email_count'      => "INTEGER NOT NULL DEFAULT 0",
+        // quando gli hai scritto di persona dalla tua casella, fuori dal pannello
+        'contacted_at'     => "TEXT",
     ] as $c => $def) {
         if (!in_array($c, $cols, true)) $p->exec("ALTER TABLE codes ADD COLUMN $c $def");
     }

@@ -252,7 +252,11 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
             <?php elseif ($r['first_used_at']): ?>
               <span class="muted" style="font-size:12.5px"
                     title="Non gliel'abbiamo mandata da qui, ma e' entrato lo stesso: il codice l'ha ricevuto altrove.">non serve</span>
-            <?php else: ?><span class="pill">da inviare</span><?php endif; ?></td>
+            <?php else: ?><span class="pill">da inviare</span><?php endif; ?>
+            <?php if ($r['contacted_at']): ?>
+              <div class="muted" style="font-size:11.5px;margin-top:4px"
+                   title="Gli hai scritto tu da Gmail">scritto a mano <?= e(date('d/m', strtotime((string)$r['contacted_at']))) ?></div>
+            <?php endif; ?></td>
         <td class="muted mono"><?= (int)$r['uses'] ?><?php if($r['last_used_at']): ?>
               <div style="font-size:11.5px"><?= e(date('d/m/y', strtotime($r['last_used_at']))) ?></div><?php endif; ?></td>
         <td class="muted mono"><?= $totLes ? ((int)$r['done'].' / '.$totLes) : '—' ?></td>
@@ -261,6 +265,10 @@ ahead('Codici di accesso', 'codici.php'); show_flash(); ?>
           <form method="post"><input type="hidden" name="csrf" value="<?= csrf() ?>">
             <input type="hidden" name="action" value="mail"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
             <button class="btn gh sm"><?= $r['email_sent_at'] ? 'Rimanda' : 'Invia email' ?></button></form>
+          <?php endif; ?>
+          <?php if (!$r['first_used_at'] && $r['email']): ?>
+            <a class="btn gh sm" href="scrivi.php?id=<?= (int)$r['id'] ?>" target="_blank" rel="noopener"
+               title="Apre Gmail con il messaggio gia' pronto: nome, codice e link">Gmail</a>
           <?php endif; ?>
           <a class="btn gh sm" href="cliente.php?id=<?= (int)$r['id'] ?>">Scheda</a>
           <a class="btn gh sm" href="codici.php?edit=<?= (int)$r['id'] ?>">Modifica</a>
